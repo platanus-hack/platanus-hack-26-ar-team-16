@@ -8,6 +8,7 @@ import {
   DaySelector,
   EmptyState,
   ExerciseCard,
+  ExerciseDetailScreen,
   RoutineHeader,
 } from '../../src/components/routine';
 import {
@@ -34,6 +35,7 @@ export default function RoutineScreen() {
 
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
   useEffect(() => {
     if (!routine?.days?.length) {
@@ -91,7 +93,7 @@ export default function RoutineScreen() {
   if (isLoading && !routine) {
     return (
       <SafeAreaView className="flex-1 bg-black" edges={['top']}>
-        <RoutineHeader routine={null} onPressCalendar={() => {}} />
+        <RoutineHeader selectedDay={null} onPressCalendar={() => {}} />
         <View className="px-4 mt-3 gap-3">
           {[0, 1, 2].map((i) => (
             <View key={i} className="h-24 rounded-2xl bg-zinc-900" />
@@ -104,7 +106,7 @@ export default function RoutineScreen() {
   if (!routine || !routine.days?.length) {
     return (
       <SafeAreaView className="flex-1 bg-black" edges={['top']}>
-        <RoutineHeader routine={null} onPressCalendar={() => setCalendarVisible(true)} />
+        <RoutineHeader selectedDay={null} onPressCalendar={() => setCalendarVisible(true)} />
         <EmptyState onStartChat={() => router.push('/(tabs)/coach')} />
       </SafeAreaView>
     );
@@ -113,7 +115,7 @@ export default function RoutineScreen() {
   return (
     <SafeAreaView className="flex-1 bg-black" edges={['top']}>
       <RoutineHeader
-        routine={routine}
+        selectedDay={selectedDay}
         onPressCalendar={() => setCalendarVisible(true)}
       />
 
@@ -127,8 +129,6 @@ export default function RoutineScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
-        {selectedDay ? <SelectedDayBanner day={selectedDay} /> : null}
-
         {exercises.length === 0 ? (
           <View className="bg-zinc-900 rounded-2xl p-6 items-center">
             <ExerciseCard
@@ -149,7 +149,7 @@ export default function RoutineScreen() {
               key={ex.id}
               exercise={ex}
               highlighted={recentlyChanged.has(ex.id)}
-              onPress={() => {}}
+              onPress={(e) => setSelectedExercise(e)}
             />
           ))
         )}
@@ -161,26 +161,12 @@ export default function RoutineScreen() {
         onClose={() => setCalendarVisible(false)}
         onSelectDay={(dayId) => setSelectedDayId(dayId)}
       />
+
+      <ExerciseDetailScreen
+        exercise={selectedExercise}
+        onClose={() => setSelectedExercise(null)}
+      />
     </SafeAreaView>
   );
 }
 
-function SelectedDayBanner({ day }: { day: { name: string; muscle_groups?: string[] | null } }) {
-  return (
-    <View className="bg-zinc-900 rounded-2xl p-4">
-      <Text className="text-zinc-400 text-xs uppercase tracking-wider mb-1">
-        Entrenamiento de hoy
-      </Text>
-      <Text className="text-white text-xl font-bold mb-2">{day.name}</Text>
-      {day.muscle_groups?.length ? (
-        <View className="flex-row flex-wrap gap-2">
-          {day.muscle_groups.map((m) => (
-            <View key={m} className="bg-primary/20 rounded-full px-2.5 py-1">
-              <Text className="text-primary text-xs font-semibold">{m}</Text>
-            </View>
-          ))}
-        </View>
-      ) : null}
-    </View>
-  );
-}
