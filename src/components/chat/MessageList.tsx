@@ -52,8 +52,8 @@ export function MessageList({ messages, isStreaming, activeTool = null }: Messag
         />
       )}
       ListEmptyComponent={
-        <View className="items-center justify-center py-20">
-          <Text className="text-base text-slate-400">
+        <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
+          <Text style={{ fontSize: 16, color: '#94A3B8' }}>
             Empezá una conversación con Gohan
           </Text>
         </View>

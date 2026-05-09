@@ -7,15 +7,15 @@ interface EmptyStateProps {
 
 export function EmptyState({ onStartChat }: EmptyStateProps) {
   return (
-    <View className="flex-1 items-center justify-center px-6">
-      <View className="w-20 h-20 rounded-full bg-zinc-800 items-center justify-center mb-5">
-        <Text className="text-3xl">💬</Text>
+    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24 }}>
+      <View style={{ width: 80, height: 80, borderRadius: 9999, backgroundColor: '#27272A', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+        <Text style={{ fontSize: 30 }}>💬</Text>
       </View>
 
-      <Text className="text-white text-xl font-bold text-center mb-2">
+      <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', textAlign: 'center', marginBottom: 8 }}>
         Todavía no tenés rutina
       </Text>
-      <Text className="text-zinc-400 text-sm text-center mb-8 leading-5">
+      <Text style={{ color: '#A1A1AA', fontSize: 14, textAlign: 'center', marginBottom: 32, lineHeight: 20 }}>
         Charlá con Gohan, contale tu objetivo y nivel, y te arma una rutina
         personalizada en menos de un minuto.
       </Text>
@@ -23,9 +23,9 @@ export function EmptyState({ onStartChat }: EmptyStateProps) {
       <Pressable
         onPress={onStartChat}
         accessibilityRole="button"
-        className="w-full h-12 rounded-xl bg-primary items-center justify-center active:opacity-90"
+        style={{ width: '100%', height: 48, borderRadius: 12, backgroundColor: '#FF6B00', alignItems: 'center', justifyContent: 'center' }}
       >
-        <Text className="text-white text-base font-bold">Charlar con Gohan</Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Charlar con Gohan</Text>
       </Pressable>
     </View>
   );

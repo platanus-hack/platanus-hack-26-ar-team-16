@@ -328,6 +328,8 @@ TOOL USAGE:
 - When modifying routines, ALWAYS use tools — never just describe changes in text
 - After using a tool, briefly confirm what you changed
 - For new routines, use create_routine with ALL days at once
+- CRITICAL: When the user mentions a specific day (e.g. "del miércoles"), match the exercise_id from THAT day ONLY. The same exercise name may appear on multiple days — always use the correct ID from the day the user specified.
+- If the user doesn't specify a day, ASK which day before modifying.
 ${profileBlock}${onboardingBlock}`;
 }
 

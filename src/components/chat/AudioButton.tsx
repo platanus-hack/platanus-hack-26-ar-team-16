@@ -14,8 +14,12 @@ export function AudioButton({ isRecording, onPress, disabled = false }: AudioBut
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className="w-10 h-10 items-center justify-center rounded-full"
       style={{
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
         backgroundColor: isRecording ? '#EF4444' : '#F1F5F9',
         opacity: disabled ? 0.5 : 1,
       }}

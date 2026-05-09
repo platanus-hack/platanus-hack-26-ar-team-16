@@ -30,8 +30,18 @@ function Dot({ delay }: { delay: number }) {
 export function TypingIndicator() {
   return (
     <View
-      className="flex-row items-center bg-slate-100 rounded-2xl rounded-bl-md self-start mb-2 px-4 py-3"
-      style={{ gap: 6 }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F1F5F9',
+        borderRadius: 16,
+        borderBottomLeftRadius: 6,
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        gap: 6,
+      }}
     >
       <Dot delay={0} />
       <Dot delay={150} />

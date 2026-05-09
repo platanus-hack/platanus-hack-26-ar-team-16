@@ -34,15 +34,32 @@ export function MessageInput({
 
   return (
     <View
-      className="flex-row items-end px-4 pt-3 pb-3 border-t border-slate-200 bg-white"
-      style={{ gap: 8 }}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        paddingHorizontal: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
+        borderTopWidth: 1,
+        borderTopColor: '#E2E8F0',
+        backgroundColor: '#FFFFFF',
+        gap: 8,
+      }}
     >
       <AudioButton
         isRecording={isRecording}
         disabled={disabled}
         onPress={isRecording ? onStopRecording : onStartRecording}
       />
-      <View className="flex-1 bg-slate-100 rounded-2xl px-4 py-2.5">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#F1F5F9',
+          borderRadius: 16,
+          paddingHorizontal: 16,
+          paddingVertical: 10,
+        }}
+      >
         <TextInput
           value={displayText}
           onChangeText={isRecording ? undefined : setText}
@@ -50,16 +67,21 @@ export function MessageInput({
           placeholderTextColor={isRecording ? '#6366F1' : '#94A3B8'}
           editable={!disabled && !isRecording}
           multiline
-          className="text-base text-slate-900"
-          style={{ maxHeight: 128 }}
+          style={{ fontSize: 16, color: '#0F172A', maxHeight: 128 }}
           onSubmitEditing={handleSend}
         />
       </View>
       <Pressable
         onPress={handleSend}
         disabled={!canSend}
-        className="w-10 h-10 items-center justify-center rounded-full"
-        style={{ backgroundColor: canSend ? theme.primary : '#CBD5E1' }}
+        style={{
+          width: 40,
+          height: 40,
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 20,
+          backgroundColor: canSend ? theme.primary : '#CBD5E1',
+        }}
       >
         <Ionicons name="send" size={18} color="#FFFFFF" />
       </Pressable>
