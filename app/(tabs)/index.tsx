@@ -1,136 +1,181 @@
-import { ScrollView, View, Text, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { Card, Badge, Avatar } from '@/components/ui';
-import { useAuthStore, useRoutineStore } from '@/store';
-import { useTheme } from '@/theme';
-import { DAY_LABELS, type DayOfWeek } from '@/types';
+/**
+ * Inicio (home) — hardcoded Megatlon demo screen.
+ *
+ * Replicates the look of the real Megatlon Inicio tab so the visitor
+ * navigating around feels they're inside the actual app. No real data.
+ *
+ * Before the live demo: swap Unsplash URLs for local assets to eliminate
+ * latency and any Unsplash downtime risk.
+ */
 
-const WEEK_ORDER: DayOfWeek[] = [1, 2, 3, 4, 5, 6, 0];
+import React from 'react';
+import { Image, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function HomeScreen() {
-  const user = useAuthStore((s) => s.user);
-  const routine = useRoutineStore((s) => s.routine);
-  const theme = useTheme();
+const MT_BRAND = '#FF6B00';
 
-  const today = new Date().getDay() as DayOfWeek;
-  const todaysDay = routine?.days.find((d) => d.dayOfWeek === today);
-  const greeting = `Hola${user?.displayName ? `, ${user.displayName.split(' ')[0]}` : ''}`;
+const NOVEDADES = [
+  {
+    id: 'norte',
+    sede: 'Sede Barrio Norte',
+    title: 'INFORMACIÓN IMPORTANTE',
+    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80',
+  },
+  {
+    id: 'jardin',
+    sede: 'Sede Barrio Jardín',
+    title: 'INFORMACIÓN IMPORTANTE',
+    image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80',
+  },
+  {
+    id: 'devoto',
+    sede: 'Sede Devoto',
+    title: 'INFORMACIÓN IMPORTANTE',
+    image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&q=80',
+  },
+];
 
-  const completedDays =
-    routine?.days.filter(
-      (d) => d.exercises.length > 0 && d.exercises.every((e) => e.completed),
-    ).length ?? 0;
+const RECOMENDADOS = [
+  {
+    id: 'pers-1',
+    title: 'ENTRENAMIENTO PERSONALIZADO',
+    subtitle: 'Reservá un PT',
+    image: 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&q=80',
+  },
+  {
+    id: 'pers-2',
+    title: 'NUTRICIÓN',
+    subtitle: 'Plan a medida',
+    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&q=80',
+  },
+];
 
+export default function InicioScreen() {
   return (
-    <ScrollView
-      className="flex-1 bg-slate-50"
-      contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 16 }}
-    >
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1 pr-3">
-          <Text className="text-3xl font-bold text-slate-900">{greeting}</Text>
-          <Text className="text-base text-slate-500 mt-1">{theme.brandName}</Text>
-        </View>
-        {user ? (
-          <Avatar name={user.displayName} uri={user.avatarUrl} size={48} />
-        ) : (
-          <Pressable
-            onPress={() => router.push('/(auth)/login')}
-            className="px-3 py-2 rounded-full"
-            style={{ backgroundColor: theme.primary }}
-          >
-            <Text className="text-white font-semibold text-sm">Ingresar</Text>
-          </Pressable>
-        )}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+        }}
+      >
+        <View style={{ width: 24 }} />
+        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '500', letterSpacing: 2 }}>
+          MEGATLON
+        </Text>
+        <MaterialCommunityIcons name="bell-outline" size={22} color="#FFFFFF" />
       </View>
 
-      <Card padding="lg">
-        <View className="flex-row items-center justify-between mb-3">
-          <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            Hoy
-          </Text>
-          <Badge label={DAY_LABELS[today]} variant="brand" />
-        </View>
-        {todaysDay && todaysDay.exercises.length > 0 ? (
-          <>
-            <Text className="text-2xl font-bold text-slate-900">
-              {todaysDay.label}
-            </Text>
-            <View className="flex-row flex-wrap mt-2" style={{ gap: 6 }}>
-              {todaysDay.muscleGroups.map((g) => (
-                <Badge key={g} label={g} />
-              ))}
-            </View>
-            <Text className="text-base text-slate-500 mt-3">
-              {todaysDay.exercises.length} ejercicios ·{' '}
-              {todaysDay.exercises.filter((e) => e.completed).length} completados
-            </Text>
-          </>
-        ) : (
-          <>
-            <Text className="text-xl font-bold text-slate-900">Día de descanso</Text>
-            <Text className="text-base text-slate-500 mt-1">
-              Hablá con Gohan si querés ajustar tu rutina.
-            </Text>
-          </>
-        )}
-      </Card>
-
-      <Pressable
-        onPress={() => router.push('/coach')}
-        style={{ backgroundColor: theme.primary }}
-        className="rounded-2xl p-5 flex-row items-center"
-      >
-        <View className="flex-1 pr-3">
-          <Text className="text-white font-semibold text-lg">Hablá con Gohan</Text>
-          <Text className="text-white/80 text-sm mt-0.5">
-            Ajustá tu rutina, agregá ejercicios o resolvé dudas
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <View
+          style={{
+            height: 200,
+            marginHorizontal: 16,
+            marginTop: 4,
+            borderRadius: 14,
+            overflow: 'hidden',
+            backgroundColor: '#1F1F1F',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Image
+            source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80' }}
+            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.55 }}
+            resizeMode="cover"
+          />
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontSize: 28,
+              fontWeight: '600',
+              letterSpacing: 0.5,
+              textAlign: 'center',
+              lineHeight: 32,
+            }}
+          >
+            CANALES DE{'\n'}ATENCIÓN
           </Text>
         </View>
-        <View className="w-10 h-10 rounded-full bg-white/20 items-center justify-center">
-          <Ionicons name="sparkles" size={20} color="#FFFFFF" />
-        </View>
-      </Pressable>
 
-      <Card padding="lg">
-        <Text className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
-          Esta semana
+        <Text
+          style={{
+            color: '#B8B8B8',
+            fontSize: 12,
+            fontWeight: '500',
+            letterSpacing: 1.5,
+            paddingHorizontal: 16,
+            marginTop: 24,
+            marginBottom: 10,
+          }}
+        >
+          NOVEDADES
         </Text>
-        <View className="flex-row justify-between" style={{ gap: 6 }}>
-          {WEEK_ORDER.map((d) => {
-            const day = routine?.days.find((rd) => rd.dayOfWeek === d);
-            const isComplete =
-              !!day &&
-              day.exercises.length > 0 &&
-              day.exercises.every((e) => e.completed);
-            const isToday = d === today;
-            return (
-              <View key={d} className="items-center flex-1">
-                <View
-                  className="w-9 h-9 rounded-full items-center justify-center mb-1"
-                  style={{
-                    backgroundColor: isComplete ? theme.primary : '#F1F5F9',
-                    borderWidth: isToday ? 2 : 0,
-                    borderColor: isToday ? theme.primary : 'transparent',
-                  }}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+        >
+          {NOVEDADES.map((n) => (
+            <View
+              key={n.id}
+              style={{ width: 240, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
+            >
+              <Image source={{ uri: n.image }} style={{ width: '100%', height: 130 }} resizeMode="cover" />
+              <View style={{ padding: 12 }}>
+                <Text
+                  style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
                 >
-                  {isComplete ? (
-                    <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                  ) : (
-                    <Text className="text-slate-500 text-xs font-medium">
-                      {DAY_LABELS[d][0]}
-                    </Text>
-                  )}
-                </View>
+                  {n.title}
+                </Text>
+                <Text style={{ color: '#888888', fontSize: 12 }}>{n.sede}</Text>
               </View>
-            );
-          })}
-        </View>
-        <Text className="text-base text-slate-500 mt-3">
-          {completedDays} días completados
+            </View>
+          ))}
+        </ScrollView>
+
+        <Text
+          style={{
+            color: '#B8B8B8',
+            fontSize: 12,
+            fontWeight: '500',
+            letterSpacing: 1.5,
+            paddingHorizontal: 16,
+            marginTop: 24,
+            marginBottom: 10,
+          }}
+        >
+          RECOMENDADOS
         </Text>
-      </Card>
-    </ScrollView>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+        >
+          {RECOMENDADOS.map((r) => (
+            <View
+              key={r.id}
+              style={{ width: 200, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
+            >
+              <Image source={{ uri: r.image }} style={{ width: '100%', height: 110 }} resizeMode="cover" />
+              <View style={{ padding: 12 }}>
+                <Text
+                  style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
+                >
+                  {r.title}
+                </Text>
+                <Text style={{ color: '#888888', fontSize: 11 }}>{r.subtitle}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        <View style={{ height: 96 }} />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
