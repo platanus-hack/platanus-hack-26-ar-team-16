@@ -1,42 +1,69 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import type { Routine } from '../../modules/routine/types';
-import { summarizeDays } from '../../modules/routine/groupByDay';
+import type { RoutineDay } from '../../modules/routine/types';
 
 interface RoutineHeaderProps {
-  routine: Routine | null;
+  selectedDay: RoutineDay | null;
   onPressCalendar: () => void;
 }
 
-export function RoutineHeader({ routine, onPressCalendar }: RoutineHeaderProps) {
+export function RoutineHeader({ selectedDay, onPressCalendar }: RoutineHeaderProps) {
+  const subtitle = selectedDay
+    ? [selectedDay.name.toUpperCase(), ...(selectedDay.muscle_groups ?? []).map(g => g.toUpperCase())].join(' · ')
+    : null;
+
   return (
-    <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-      <View style={{ flex: 1, paddingRight: 12 }}>
-        <Text style={{ color: '#A1A1AA', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-          Mi entrenamiento
-        </Text>
-        <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: '700' }} numberOfLines={1}>
-          {routine?.name ?? 'Sin rutina activa'}
-        </Text>
-
-        {routine?.days?.length ? (
-          <View style={{ backgroundColor: '#27272A', alignSelf: 'flex-start', borderRadius: 9999, paddingHorizontal: 12, paddingVertical: 4, marginTop: 8 }}>
-            <Text style={{ color: '#E4E4E7', fontSize: 12, fontWeight: '500' }}>
-              {summarizeDays(routine.days)}
-            </Text>
-          </View>
-        ) : null}
+    <View style={styles.wrap}>
+      <View style={styles.left}>
+        <Text style={styles.section}>MI ENTRENAMIENTO</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-
       <Pressable
         onPress={onPressCalendar}
         accessibilityRole="button"
         accessibilityLabel="Abrir calendario"
-        style={{ width: 44, height: 44, borderRadius: 9999, backgroundColor: '#27272A', alignItems: 'center', justifyContent: 'center' }}
+        style={({ pressed }) => [styles.calBtn, { opacity: pressed ? 0.6 : 1 }]}
       >
-        <Text style={{ color: '#FFFFFF', fontSize: 18 }}>📅</Text>
+        <Ionicons name="calendar-outline" size={22} color="#fff" />
       </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  left: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  section: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: '#b8b8b8',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF6B00',
+    letterSpacing: 0.5,
+  },
+  calBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1a1a1a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
