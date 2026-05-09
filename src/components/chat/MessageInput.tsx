@@ -9,7 +9,6 @@ interface MessageInputProps {
   onStartRecording: () => void;
   onStopRecording: () => void;
   isRecording: boolean;
-  liveTranscript?: string;
   disabled?: boolean;
 }
 
@@ -18,12 +17,10 @@ export function MessageInput({
   onStartRecording,
   onStopRecording,
   isRecording,
-  liveTranscript = '',
   disabled = false,
 }: MessageInputProps) {
   const [text, setText] = useState('');
   const theme = useTheme();
-  const displayText = isRecording ? liveTranscript : text;
   const canSend = text.trim().length > 0 && !disabled && !isRecording;
 
   const handleSend = () => {
@@ -44,10 +41,10 @@ export function MessageInput({
       />
       <View className="flex-1 bg-slate-100 rounded-2xl px-4 py-2.5">
         <TextInput
-          value={displayText}
-          onChangeText={isRecording ? undefined : setText}
-          placeholder={isRecording ? '🎤 Escuchando...' : 'Escribí un mensaje'}
-          placeholderTextColor={isRecording ? '#6366F1' : '#94A3B8'}
+          value={text}
+          onChangeText={setText}
+          placeholder={isRecording ? 'Grabando...' : 'Escribí un mensaje'}
+          placeholderTextColor="#94A3B8"
           editable={!disabled && !isRecording}
           multiline
           className="text-base text-slate-900"

@@ -8,15 +8,17 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { Button, Input } from '@/components/ui';
+import { useAuthStore } from '@/store';
 import { useTheme } from '@/theme';
-import { signInWithEmail } from '@/services';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const setUser = useAuthStore((s) => s.setUser);
   const theme = useTheme();
 
   const handleLogin = async () => {
@@ -27,11 +29,22 @@ export default function LoginScreen() {
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await signInWithEmail(email, password);
-      if (authError) {
-        setError(authError.message);
-        return;
-      }
+      // TODO @DanteDia: replace with real Supabase auth.signInWithPassword.
+      await new Promise((r) => setTimeout(r, 600));
+      setUser({
+        id: 'mock-user-1',
+        tenantId: 'default',
+        displayName: email.split('@')[0] ?? 'Usuario',
+        avatarUrl: null,
+        fitnessLevel: 'intermediate',
+        equipmentAvailable: [],
+        injuries: [],
+        trainingDaysPerWeek: 4,
+        goals: [],
+        onboardingCompleted: false,
+        createdAt: new Date().toISOString(),
+      });
+      router.replace('/');
     } catch {
       setError('Error al iniciar sesión');
     } finally {
