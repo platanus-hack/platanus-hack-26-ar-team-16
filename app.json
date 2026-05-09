@@ -30,16 +30,7 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-router",
-      "expo-font",
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Gohan AI necesita acceso al micrófono para escuchar tus instrucciones de entrenamiento.",
-          "speechRecognitionPermission": "Gohan AI usa reconocimiento de voz para transcribir tus mensajes.",
-          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
-        }
-      ]
+      "expo-router"
     ]
   }
 }

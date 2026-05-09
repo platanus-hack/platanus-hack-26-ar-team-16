@@ -78,31 +78,37 @@ export async function sendUserMessage(
     s.setActiveTool(null);
   };
 
-  streamChat(
-    { userMessage: trimmed, conversationHistory, userProfile },
-    {
-      onToken: (token) => {
-        buffer += token;
-        const s = useChatStore.getState();
-        s.updateMessage(assistantId, buffer);
-        s.setStreaming({ partialContent: buffer });
+  try {
+    await streamChat(
+      { userMessage: trimmed, conversationHistory, userProfile },
+      {
+        onToken: (token) => {
+          buffer += token;
+          const s = useChatStore.getState();
+          s.updateMessage(assistantId, buffer);
+          s.setStreaming({ partialContent: buffer });
+        },
+        onToolStart: (toolName) => {
+          useChatStore.getState().setActiveTool(toolName);
+        },
+        onToolEnd: () => {
+          useChatStore.getState().setActiveTool(null);
+        },
+        onDone: (full) => {
+          if (full) useChatStore.getState().updateMessage(assistantId, full);
+          finalize();
+        },
+        onError: (msg) => {
+          console.warn('[chat] stream error:', msg);
+          finalize(msg);
+        },
       },
-      onToolStart: (toolName) => {
-        useChatStore.getState().setActiveTool(toolName);
-      },
-      onToolEnd: () => {
-        useChatStore.getState().setActiveTool(null);
-      },
-      onDone: (full) => {
-        if (full) useChatStore.getState().updateMessage(assistantId, full);
-        finalize();
-      },
-      onError: (msg) => {
-        console.warn('[chat] stream error:', msg);
-        finalize(msg);
-      },
-    },
-  );
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de conexión';
+    console.warn('[chat] sendUserMessage failed:', err);
+    finalize(msg);
+  }
 }
 
 export function pushAudioBubble(audioUrl: string): void {
