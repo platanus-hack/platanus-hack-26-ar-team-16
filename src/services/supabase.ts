@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
+import type { Database } from '../types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -11,13 +14,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Note: persistent session in native requires a storage adapter
-// (e.g. @react-native-async-storage/async-storage). Until that dep is added
-// in main, native sessions stay in memory and users re-auth on app restart.
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// On web, supabase-js uses localStorage by default; passing AsyncStorage there
+// would fail because it's a thin wrapper around AsyncStorage's native module.
+const storage = Platform.OS === 'web' ? undefined : AsyncStorage;
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
+    storage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web',
   },
 });
