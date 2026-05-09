@@ -1,5 +1,5 @@
 {
-  "project-name": "<FILL THIS>",
-  "project-oneliner-spanish": "<FILL THIS>",
-  "project-description-spanish": "<FILL THIS>"
+  "project-name": "Gohan AI",
+  "project-oneliner-spanish": "Módulos de personal trainer IA para apps de gimnasios existentes",
+  "project-description-spanish": "Gohan AI es un sistema de módulos integrables que transforma cualquier app de gimnasio en un entrenador personal inteligente. A través de un chat conversacional con IA, el usuario recibe rutinas personalizadas que se adaptan en tiempo real a sus necesidades, equipamiento disponible y limitaciones físicas. Los gimnasios integran los módulos via MCP server, sin necesidad de construir una app nueva."
 }
