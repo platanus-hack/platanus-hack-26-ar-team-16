@@ -1,42 +1,69 @@
 import React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import type { Routine } from '../../modules/routine/types';
-import { summarizeDays } from '../../modules/routine/groupByDay';
+import type { RoutineDay } from '../../modules/routine/types';
 
 interface RoutineHeaderProps {
-  routine: Routine | null;
+  selectedDay: RoutineDay | null;
   onPressCalendar: () => void;
 }
 
-export function RoutineHeader({ routine, onPressCalendar }: RoutineHeaderProps) {
+export function RoutineHeader({ selectedDay, onPressCalendar }: RoutineHeaderProps) {
+  const subtitle = selectedDay
+    ? [selectedDay.name.toUpperCase(), ...(selectedDay.muscle_groups ?? []).map(g => g.toUpperCase())].join(' · ')
+    : null;
+
   return (
-    <View className="px-4 pt-2 pb-1 flex-row items-start justify-between">
-      <View className="flex-1 pr-3">
-        <Text className="text-zinc-400 text-xs uppercase tracking-wider mb-1">
-          Mi entrenamiento
-        </Text>
-        <Text className="text-white text-2xl font-bold" numberOfLines={1}>
-          {routine?.name ?? 'Sin rutina activa'}
-        </Text>
-
-        {routine?.days?.length ? (
-          <View className="bg-zinc-800 self-start rounded-full px-3 py-1 mt-2">
-            <Text className="text-zinc-200 text-xs font-medium">
-              {summarizeDays(routine.days)}
-            </Text>
-          </View>
-        ) : null}
+    <View style={styles.wrap}>
+      <View style={styles.left}>
+        <Text style={styles.section}>MI ENTRENAMIENTO</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
-
       <Pressable
         onPress={onPressCalendar}
         accessibilityRole="button"
         accessibilityLabel="Abrir calendario"
-        className="w-11 h-11 rounded-full bg-zinc-800 items-center justify-center active:opacity-70"
+        style={({ pressed }) => [styles.calBtn, { opacity: pressed ? 0.6 : 1 }]}
       >
-        <Text className="text-white text-lg">📅</Text>
+        <Ionicons name="calendar-outline" size={22} color="#fff" />
       </Pressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  wrap: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  left: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  section: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 1.5,
+    color: '#b8b8b8',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF6B00',
+    letterSpacing: 0.5,
+  },
+  calBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1a1a1a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
