@@ -27,11 +27,6 @@ export default function RootLayout() {
   const setLoading = useAuthStore((s) => s.setLoading);
 
   useEffect(() => {
-    // DEMO: auto-login with demo user, skip manual login screen
-    import('@/services').then(({ signInWithEmail }) => {
-      signInWithEmail('demo@gohan.ai', 'GohanDemo2026!').catch(() => {});
-    });
-
     const unsubscribe = onAuthStateChange(async (session) => {
       if (session?.user) {
         try {
