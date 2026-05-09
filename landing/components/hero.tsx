@@ -11,7 +11,7 @@ export function Hero() {
 
       <div className="mx-auto max-w-[1440px] px-6 md:px-10 relative">
         <Reveal>
-          <Eyebrow number="01">Vertical AI for fitness · Buenos Aires</Eyebrow>
+          <Eyebrow number="01">AI for fitness · Buenos Aires</Eyebrow>
         </Reveal>
 
         <h1 className="display mt-10 text-[19vw] md:text-[15vw] lg:text-[14rem] -tracking-[0.04em]">
@@ -70,9 +70,9 @@ export function Hero() {
         <div className="text-right text-[10px] uppercase tracking-[0.22em] text-[var(--color-mute)] font-mono">
           <div className="flex items-center justify-end gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-flame)] pulse-ring" />
-            <span>v0.1 · Hack edition</span>
+            <span>v0.1 · Live demo</span>
           </div>
-          <div className="mt-1">Platanus Hack 26</div>
+          <div className="mt-1">Buenos Aires</div>
         </div>
       </Reveal>
     </section>
