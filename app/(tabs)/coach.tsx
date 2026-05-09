@@ -2,14 +2,14 @@ import { useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { MessageList, MessageInput } from '@/components/chat';
 import { useChatStore } from '@/store';
-import { sendUserMessage, seedWelcomeMessage, pushAudioBubble } from '@/modules/chat';
-import { useAudioRecorder } from '@/hooks';
+import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
+import { useSpeechRecognition } from '@/hooks';
 
 export default function CoachScreen() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.streaming.isStreaming);
   const activeTool = useChatStore((s) => s.activeTool);
-  const { isRecording, startRecording, stopRecording } = useAudioRecorder();
+  const { isListening, transcript, startListening, stopListening } = useSpeechRecognition();
 
   useEffect(() => {
     seedWelcomeMessage();
@@ -20,8 +20,10 @@ export default function CoachScreen() {
   };
 
   const handleStopRecording = async () => {
-    const uri = await stopRecording();
-    if (uri) pushAudioBubble(uri);
+    const text = await stopListening();
+    if (text.trim()) {
+      void sendUserMessage(text.trim());
+    }
   };
 
   return (
@@ -38,9 +40,10 @@ export default function CoachScreen() {
       </View>
       <MessageInput
         onSend={handleSend}
-        onStartRecording={startRecording}
+        onStartRecording={startListening}
         onStopRecording={handleStopRecording}
-        isRecording={isRecording}
+        isRecording={isListening}
+        liveTranscript={transcript}
         disabled={isStreaming}
       />
     </KeyboardAvoidingView>

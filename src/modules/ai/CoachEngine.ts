@@ -1,3 +1,4 @@
+import EventSource from 'react-native-sse';
 import type { ChatRequest, CoachMessage, CoachResponse, StreamChunk } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -11,14 +12,17 @@ export interface CoachCallbacks {
   onError: (error: string) => void;
 }
 
-export async function streamChat(
+export function streamChat(
   request: ChatRequest,
   callbacks: CoachCallbacks,
   abortSignal?: AbortSignal
-): Promise<void> {
+): void {
   const url = `${SUPABASE_URL}/functions/v1/ai-chat`;
 
-  const response = await fetch(url, {
+  let fullResponse = '';
+  let routineModified = false;
+
+  const es = new EventSource(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -26,75 +30,57 @@ export async function streamChat(
       apikey: SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(request),
-    signal: abortSignal,
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    callbacks.onError(`Error ${response.status}: ${errorText}`);
-    return;
+  const cleanup = () => {
+    es.removeAllEventListeners();
+    es.close();
+  };
+
+  if (abortSignal) {
+    abortSignal.addEventListener('abort', cleanup);
   }
 
-  const reader = response.body?.getReader();
-  if (!reader) {
-    callbacks.onError('No response stream available');
-    return;
-  }
+  es.addEventListener('message', (event: { data?: string }) => {
+    const data = event.data?.trim();
+    if (!data) return;
 
-  const decoder = new TextDecoder();
-  let fullResponse = '';
-  let routineModified = false;
-  let buffer = '';
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      const lines = buffer.split('\n');
-      buffer = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-
-        const data = line.slice(6).trim();
-        if (data === '[DONE]') {
-          callbacks.onDone(fullResponse, routineModified);
-          return;
-        }
-
-        try {
-          const chunk: StreamChunk = JSON.parse(data);
-
-          switch (chunk.type) {
-            case 'text':
-              fullResponse += chunk.content;
-              callbacks.onToken(chunk.content);
-              break;
-            case 'tool_start':
-              callbacks.onToolStart(chunk.toolName ?? chunk.content);
-              break;
-            case 'tool_end':
-              routineModified = true;
-              callbacks.onToolEnd(chunk.toolName ?? chunk.content, chunk.toolSuccess ?? true);
-              break;
-            case 'error':
-              callbacks.onError(chunk.content);
-              return;
-          }
-        } catch {
-          // skip malformed lines
-        }
-      }
+    if (data === '[DONE]') {
+      cleanup();
+      callbacks.onDone(fullResponse, routineModified);
+      return;
     }
 
-    callbacks.onDone(fullResponse, routineModified);
-  } catch (err) {
+    try {
+      const chunk: StreamChunk = JSON.parse(data);
+
+      switch (chunk.type) {
+        case 'text':
+          fullResponse += chunk.content;
+          callbacks.onToken(chunk.content);
+          break;
+        case 'tool_start':
+          callbacks.onToolStart(chunk.toolName ?? chunk.content);
+          break;
+        case 'tool_end':
+          routineModified = true;
+          callbacks.onToolEnd(chunk.toolName ?? chunk.content, chunk.toolSuccess ?? true);
+          break;
+        case 'error':
+          cleanup();
+          callbacks.onError(chunk.content);
+          break;
+      }
+    } catch {
+      // skip malformed events
+    }
+  });
+
+  es.addEventListener('error', (event: { message?: string }) => {
+    cleanup();
     if (abortSignal?.aborted) return;
-    callbacks.onError(err instanceof Error ? err.message : 'Unknown streaming error');
-  }
+    callbacks.onError(event.message ?? 'Streaming connection error');
+  });
 }
 
 export async function sendChat(request: ChatRequest): Promise<CoachResponse> {
