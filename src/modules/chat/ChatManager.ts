@@ -1,6 +1,7 @@
-import { useChatStore } from '@/store';
+import { useAuthStore, useChatStore } from '@/store';
 import type { ChatMessage } from '@/types';
-import { mockStreamReply } from './mockCoach';
+import { buildConversationHistory, streamChat } from '@/modules/ai';
+import type { ChatRequest } from '@/modules/ai';
 
 const MOCK_CONVERSATION_ID = 'mock-conversation';
 
@@ -17,11 +18,33 @@ interface SendOptions {
   audioUrl?: string | null;
 }
 
-export async function sendUserMessage(content: string, opts?: SendOptions): Promise<void> {
+function buildUserProfileForRequest(): ChatRequest['userProfile'] {
+  const u = useAuthStore.getState().user;
+  if (!u) return null;
+  return {
+    id: u.id,
+    displayName: u.displayName,
+    fitnessLevel: u.fitnessLevel,
+    equipmentAvailable: u.equipmentAvailable,
+    injuries: u.injuries,
+    trainingDaysPerWeek: u.trainingDaysPerWeek,
+    goals: u.goals,
+    onboardingCompleted: u.onboardingCompleted,
+  };
+}
+
+export async function sendUserMessage(
+  content: string,
+  opts?: SendOptions,
+): Promise<void> {
   const trimmed = content.trim();
   if (!trimmed) return;
 
-  const store = useChatStore.getState();
+  const chat = useChatStore.getState();
+  // Snapshot prior turns BEFORE we mutate the store with the new turn.
+  const conversationHistory = buildConversationHistory(chat.messages);
+  const userProfile = buildUserProfileForRequest();
+
   const userMsg: ChatMessage = {
     id: generateTempId(),
     conversationId: MOCK_CONVERSATION_ID,
@@ -30,30 +53,76 @@ export async function sendUserMessage(content: string, opts?: SendOptions): Prom
     audioUrl: opts?.audioUrl ?? null,
     createdAt: new Date().toISOString(),
   };
-  store.addMessage(userMsg);
+  chat.addMessage(userMsg);
 
+  const assistantId = generateTempId();
   const assistantMsg: ChatMessage = {
-    id: generateTempId(),
+    id: assistantId,
     conversationId: MOCK_CONVERSATION_ID,
     role: 'assistant',
     content: '',
     audioUrl: null,
     createdAt: new Date().toISOString(),
   };
-  store.addMessage(assistantMsg);
-  store.setStreaming({ isStreaming: true, partialContent: '' });
+  chat.addMessage(assistantMsg);
+  chat.setStreaming({ isStreaming: true, partialContent: '' });
+  chat.setActiveTool(null);
 
   let buffer = '';
-  try {
-    for await (const token of mockStreamReply(trimmed)) {
-      buffer += token;
-      const current = useChatStore.getState();
-      current.updateMessage(assistantMsg.id, buffer);
-      current.setStreaming({ partialContent: buffer });
+  const finalize = (errorText?: string) => {
+    const s = useChatStore.getState();
+    if (errorText && buffer.length === 0) {
+      s.updateMessage(assistantId, `⚠️ ${errorText}`);
     }
-  } finally {
-    useChatStore.getState().setStreaming({ isStreaming: false, partialContent: '' });
+    s.setStreaming({ isStreaming: false, partialContent: '' });
+    s.setActiveTool(null);
+  };
+
+  try {
+    await streamChat(
+      { userMessage: trimmed, conversationHistory, userProfile },
+      {
+        onToken: (token) => {
+          buffer += token;
+          const s = useChatStore.getState();
+          s.updateMessage(assistantId, buffer);
+          s.setStreaming({ partialContent: buffer });
+        },
+        onToolStart: (toolName) => {
+          useChatStore.getState().setActiveTool(toolName);
+        },
+        onToolEnd: () => {
+          useChatStore.getState().setActiveTool(null);
+        },
+        onDone: (full) => {
+          if (full) useChatStore.getState().updateMessage(assistantId, full);
+          finalize();
+        },
+        onError: (msg) => {
+          console.warn('[chat] stream error:', msg);
+          finalize(msg);
+        },
+      },
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Error de conexión';
+    console.warn('[chat] sendUserMessage failed:', err);
+    finalize(msg);
   }
+}
+
+export function pushAudioBubble(audioUrl: string): void {
+  // Holds the recorded audio in the conversation UI without invoking the AI.
+  // STT is not wired yet (Dev 4 to add); once it is, this should call
+  // `sendUserMessage(transcribedText, { audioUrl })` instead.
+  useChatStore.getState().addMessage({
+    id: generateTempId(),
+    conversationId: MOCK_CONVERSATION_ID,
+    role: 'user',
+    content: '🎤 Audio (transcripción próximamente)',
+    audioUrl,
+    createdAt: new Date().toISOString(),
+  });
 }
 
 export function seedWelcomeMessage(): void {

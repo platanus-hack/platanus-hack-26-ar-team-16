@@ -3,13 +3,15 @@ import { FlatList, View, Text } from 'react-native';
 import type { ChatMessage } from '@/types';
 import { ChatBubble } from './ChatBubble';
 import { TypingIndicator } from './TypingIndicator';
+import { ToolIndicator } from './ToolIndicator';
 
 interface MessageListProps {
   messages: ChatMessage[];
   isStreaming: boolean;
+  activeTool?: string | null;
 }
 
-export function MessageList({ messages, isStreaming }: MessageListProps) {
+export function MessageList({ messages, isStreaming, activeTool = null }: MessageListProps) {
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
@@ -17,11 +19,20 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
     requestAnimationFrame(() => {
       listRef.current?.scrollToEnd({ animated: true });
     });
-  }, [messages, isStreaming]);
+  }, [messages, isStreaming, activeTool]);
 
   const last = messages[messages.length - 1];
-  const showTypingFooter =
-    isStreaming && last?.role === 'assistant' && last.content.length === 0;
+  const showTyping =
+    isStreaming &&
+    !activeTool &&
+    last?.role === 'assistant' &&
+    last.content.length === 0;
+
+  const footer = activeTool ? (
+    <ToolIndicator toolName={activeTool} />
+  ) : showTyping ? (
+    <TypingIndicator />
+  ) : null;
 
   return (
     <FlatList
@@ -47,7 +58,7 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
           </Text>
         </View>
       }
-      ListFooterComponent={showTypingFooter ? <TypingIndicator /> : null}
+      ListFooterComponent={footer}
       onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
     />
   );

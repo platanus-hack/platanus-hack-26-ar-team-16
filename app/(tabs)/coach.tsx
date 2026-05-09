@@ -2,12 +2,13 @@ import { useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 import { MessageList, MessageInput } from '@/components/chat';
 import { useChatStore } from '@/store';
-import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
+import { sendUserMessage, seedWelcomeMessage, pushAudioBubble } from '@/modules/chat';
 import { useAudioRecorder } from '@/hooks';
 
 export default function CoachScreen() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.streaming.isStreaming);
+  const activeTool = useChatStore((s) => s.activeTool);
   const { isRecording, startRecording, stopRecording } = useAudioRecorder();
 
   useEffect(() => {
@@ -20,10 +21,7 @@ export default function CoachScreen() {
 
   const handleStopRecording = async () => {
     const uri = await stopRecording();
-    if (uri) {
-      // TODO @Juampiman: hand audio URI to AI module for STT before sending.
-      void sendUserMessage('[Mensaje de audio]', { audioUrl: uri });
-    }
+    if (uri) pushAudioBubble(uri);
   };
 
   return (
@@ -32,7 +30,11 @@ export default function CoachScreen() {
       className="flex-1 bg-white"
     >
       <View className="flex-1">
-        <MessageList messages={messages} isStreaming={isStreaming} />
+        <MessageList
+          messages={messages}
+          isStreaming={isStreaming}
+          activeTool={activeTool}
+        />
       </View>
       <MessageInput
         onSend={handleSend}
