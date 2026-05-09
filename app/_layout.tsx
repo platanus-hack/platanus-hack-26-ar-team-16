@@ -3,6 +3,8 @@ import { useEffect } from "react";
 import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { useFonts } from "expo-font";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuthStore, useTenantStore } from "@/store";
 import {
   getProfile,
@@ -50,6 +52,14 @@ function useDemoAutoLogin() {
 }
 
 export default function RootLayout() {
+  // Preload @expo/vector-icons fonts so glyphs render on web. Without this
+  // the icon font's @font-face declaration races the first paint and
+  // Ionicons / MaterialCommunityIcons render as empty squares.
+  const [iconsLoaded] = useFonts({
+    ...Ionicons.font,
+    ...MaterialCommunityIcons.font,
+  });
+
   const setUser = useAuthStore((s) => s.setUser);
   const setLoading = useAuthStore((s) => s.setLoading);
   const setTenant = useTenantStore((s) => s.setTenant);
@@ -85,6 +95,9 @@ export default function RootLayout() {
 
   useDemoAutoLogin();
   useProtectedRoute();
+
+  // Wait for icon fonts before first paint so we never flash empty squares.
+  if (!iconsLoaded) return null;
 
   return (
     <>
