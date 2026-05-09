@@ -8,7 +8,6 @@ import {
   DaySelector,
   EmptyState,
   ExerciseCard,
-  ExerciseDetailScreen,
   RoutineHeader,
 } from '../../src/components/routine';
 import {
@@ -35,7 +34,6 @@ export default function RoutineScreen() {
 
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
-  const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
 
   useEffect(() => {
     if (!routine?.days?.length) {
@@ -92,11 +90,11 @@ export default function RoutineScreen() {
 
   if (isLoading && !routine) {
     return (
-      <SafeAreaView className="flex-1 bg-black" edges={['top']}>
-        <RoutineHeader selectedDay={null} onPressCalendar={() => {}} />
-        <View className="px-4 mt-3 gap-3">
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={['top']}>
+        <RoutineHeader routine={null} onPressCalendar={() => {}} />
+        <View style={{ paddingHorizontal: 16, marginTop: 12, gap: 12 }}>
           {[0, 1, 2].map((i) => (
-            <View key={i} className="h-24 rounded-2xl bg-zinc-900" />
+            <View key={i} style={{ height: 96, borderRadius: 16, backgroundColor: '#18181B' }} />
           ))}
         </View>
       </SafeAreaView>
@@ -105,17 +103,17 @@ export default function RoutineScreen() {
 
   if (!routine || !routine.days?.length) {
     return (
-      <SafeAreaView className="flex-1 bg-black" edges={['top']}>
-        <RoutineHeader selectedDay={null} onPressCalendar={() => setCalendarVisible(true)} />
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={['top']}>
+        <RoutineHeader routine={null} onPressCalendar={() => setCalendarVisible(true)} />
         <EmptyState onStartChat={() => router.push('/(tabs)/coach')} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={['top']}>
       <RoutineHeader
-        selectedDay={selectedDay}
+        routine={routine}
         onPressCalendar={() => setCalendarVisible(true)}
       />
 
@@ -129,8 +127,10 @@ export default function RoutineScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
+        {selectedDay ? <SelectedDayBanner day={selectedDay} /> : null}
+
         {exercises.length === 0 ? (
-          <View className="bg-zinc-900 rounded-2xl p-6 items-center">
+          <View style={{ backgroundColor: '#18181B', borderRadius: 16, padding: 24, alignItems: 'center' }}>
             <ExerciseCard
               exercise={{
                 id: 'no-exercises',
@@ -149,7 +149,7 @@ export default function RoutineScreen() {
               key={ex.id}
               exercise={ex}
               highlighted={recentlyChanged.has(ex.id)}
-              onPress={(e) => setSelectedExercise(e)}
+              onPress={() => {}}
             />
           ))
         )}
@@ -161,12 +161,26 @@ export default function RoutineScreen() {
         onClose={() => setCalendarVisible(false)}
         onSelectDay={(dayId) => setSelectedDayId(dayId)}
       />
-
-      <ExerciseDetailScreen
-        exercise={selectedExercise}
-        onClose={() => setSelectedExercise(null)}
-      />
     </SafeAreaView>
   );
 }
 
+function SelectedDayBanner({ day }: { day: { name: string; muscle_groups?: string[] | null } }) {
+  return (
+    <View style={{ backgroundColor: '#18181B', borderRadius: 16, padding: 16 }}>
+      <Text style={{ color: '#A1A1AA', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+        Entrenamiento de hoy
+      </Text>
+      <Text style={{ color: '#FFFFFF', fontSize: 20, fontWeight: '700', marginBottom: 8 }}>{day.name}</Text>
+      {day.muscle_groups?.length ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {day.muscle_groups.map((m) => (
+            <View key={m} style={{ backgroundColor: 'rgba(255,107,0,0.2)', borderRadius: 9999, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ color: '#FF6B00', fontSize: 12, fontWeight: '600' }}>{m}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}

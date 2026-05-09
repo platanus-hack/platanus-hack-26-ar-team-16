@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { MessageList, MessageInput } from '@/components/chat';
 import { useChatStore } from '@/store';
 import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
@@ -27,25 +28,28 @@ export default function CoachScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
-    >
-      <View className="flex-1">
-        <MessageList
-          messages={messages}
-          isStreaming={isStreaming}
-          activeTool={activeTool}
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={{ flex: 1 }}>
+          <MessageList
+            messages={messages}
+            isStreaming={isStreaming}
+            activeTool={activeTool}
+          />
+        </View>
+        <MessageInput
+          onSend={handleSend}
+          onStartRecording={startListening}
+          onStopRecording={handleStopRecording}
+          isRecording={isListening}
+          liveTranscript={transcript}
+          disabled={isStreaming}
         />
-      </View>
-      <MessageInput
-        onSend={handleSend}
-        onStartRecording={startListening}
-        onStopRecording={handleStopRecording}
-        isRecording={isListening}
-        liveTranscript={transcript}
-        disabled={isStreaming}
-      />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

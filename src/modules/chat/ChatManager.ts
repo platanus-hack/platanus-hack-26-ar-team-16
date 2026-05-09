@@ -2,6 +2,7 @@ import { useAuthStore, useChatStore } from '@/store';
 import type { ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/modules/ai';
 import type { ChatRequest } from '@/modules/ai';
+import { markOnboardingCompleted } from '@/services';
 
 const MOCK_CONVERSATION_ID = 'mock-conversation';
 
@@ -90,8 +91,15 @@ export async function sendUserMessage(
       onToolStart: (toolName) => {
         useChatStore.getState().setActiveTool(toolName);
       },
-      onToolEnd: () => {
+      onToolEnd: (toolName, success) => {
         useChatStore.getState().setActiveTool(null);
+        if (toolName === 'create_routine' && success) {
+          const user = useAuthStore.getState().user;
+          if (user && !user.onboardingCompleted) {
+            useAuthStore.getState().setUser({ ...user, onboardingCompleted: true });
+            markOnboardingCompleted(user.id).catch(() => {});
+          }
+        }
       },
       onDone: (full) => {
         if (full) useChatStore.getState().updateMessage(assistantId, full);

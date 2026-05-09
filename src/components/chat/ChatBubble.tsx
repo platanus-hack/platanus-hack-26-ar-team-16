@@ -12,15 +12,22 @@ export function ChatBubble({ message, isStreaming = false }: ChatBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <View className={`flex-row mb-2 ${isUser ? 'justify-end' : 'justify-start'}`}>
+    <View style={{ flexDirection: 'row', marginBottom: 8, justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
       <View
-        className={`max-w-[85%] px-4 py-3 rounded-2xl ${isUser ? 'rounded-br-md' : 'rounded-bl-md bg-slate-100'}`}
-        style={isUser ? { backgroundColor: theme.primary } : undefined}
+        style={{
+          maxWidth: '85%',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderRadius: 16,
+          ...(isUser
+            ? { borderBottomRightRadius: 6, backgroundColor: theme.primary }
+            : { borderBottomLeftRadius: 6, backgroundColor: '#F1F5F9' }),
+        }}
       >
-        <Text className={`text-base ${isUser ? 'text-white' : 'text-slate-900'}`}>
+        <Text style={{ fontSize: 16, color: isUser ? '#FFFFFF' : '#0F172A' }}>
           {message.content}
           {isStreaming && !isUser && (
-            <Text className="text-slate-400">▍</Text>
+            <Text style={{ color: '#94A3B8' }}>▍</Text>
           )}
         </Text>
       </View>

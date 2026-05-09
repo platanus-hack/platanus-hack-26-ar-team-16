@@ -24,14 +24,20 @@ export function ToolIndicator({ toolName }: ToolIndicatorProps) {
   const theme = useTheme();
   return (
     <View
-      className="flex-row items-center self-start mb-2 px-3 py-2 rounded-full"
       style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        alignSelf: 'flex-start',
+        marginBottom: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 9999,
         gap: 8,
         backgroundColor: `${theme.primary}1A`,
       }}
     >
       <Ionicons name="construct" size={14} color={theme.primary} />
-      <Text className="text-sm font-medium" style={{ color: theme.primary }}>
+      <Text style={{ fontSize: 14, fontWeight: '500', color: theme.primary }}>
         {labelFor(toolName)}
       </Text>
     </View>
