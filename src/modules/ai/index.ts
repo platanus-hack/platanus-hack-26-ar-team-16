@@ -1,4 +1,5 @@
-export { sendMessage, streamMessage } from './CoachEngine';
-export { COACH_SYSTEM_PROMPT, ONBOARDING_PROMPT, COACH_TOOLS } from './prompts';
-export * from './tools';
+export { streamChat, sendChat, buildConversationHistory } from './CoachEngine';
+export type { CoachCallbacks } from './CoachEngine';
+export { buildSystemPrompt, buildOnboardingPrompt, buildExplainExercisePrompt } from './prompts';
+export { COACH_TOOLS } from './tools';
 export * from './types';
