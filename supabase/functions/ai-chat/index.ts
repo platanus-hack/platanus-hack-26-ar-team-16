@@ -387,8 +387,11 @@ Deno.serve(async (req: Request) => {
     const systemPrompt = buildSystemPrompt(userProfile);
     const routineContext = await getRoutineContext(userId);
 
+    const MAX_HISTORY_MESSAGES = 20;
+    const recentHistory = (conversationHistory ?? []).slice(-MAX_HISTORY_MESSAGES);
+
     const messages: Anthropic.MessageParam[] = [
-      ...(conversationHistory ?? []).map((m: any) => ({
+      ...recentHistory.map((m: any) => ({
         role: m.role as 'user' | 'assistant',
         content: m.content,
       })),
