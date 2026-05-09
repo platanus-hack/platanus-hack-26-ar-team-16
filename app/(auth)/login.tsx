@@ -10,13 +10,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useTheme } from '@/theme';
-import { signInWithEmail } from '@/services';
+import { signInWithEmail, signInWithGoogle } from '@/services';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const theme = useTheme();
 
   const handleLogin = async () => {
@@ -36,6 +37,22 @@ export default function LoginScreen() {
       setError('Error al iniciar sesión');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      const { error: authError } = await signInWithGoogle();
+      if (authError) {
+        setError(authError.message);
+      }
+      // On success, onAuthStateChange in app/_layout.tsx redirects out of (auth).
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error con Google');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -99,7 +116,8 @@ export default function LoginScreen() {
               label="Continuar con Google"
               variant="secondary"
               fullWidth
-              onPress={() => setError('Google OAuth pendiente (DEV 3)')}
+              loading={googleLoading}
+              onPress={handleGoogle}
             />
           </View>
         </View>
