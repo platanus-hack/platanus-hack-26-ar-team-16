@@ -425,14 +425,46 @@ DEV 2 (Chat UI)  ──→  user message  ──→  DEV 4 (AI Engine)
 
 ---
 
+## Protocolo Anti-Conflicto de Merge
+
+### Base común (YA HECHO en main)
+El scaffolding completo ya está en `main`:
+- Expo project inicializado con TODAS las dependencias
+- Layouts y pantallas con placeholders
+- Stores, services, hooks con firmas definidas
+- Types/contratos compartidos
+- Config files cerrados (tsconfig, tailwind, app.json, metro.config)
+- MCP server scaffold
+- Migración SQL base
+
+### Reglas para cada dev desde su branch
+
+1. **SOLO reemplazá placeholders y creá archivos NUEVOS** en tus carpetas exclusivas
+2. **NUNCA modifiques**: `package.json`, `app.json`, `tsconfig.json`, `tailwind.config.js`, `metro.config.js`, `app/_layout.tsx`, `app/(tabs)/_layout.tsx`
+3. **Si necesitás un paquete nuevo**: pedilo en el grupo, se instala en `main`, todos hacen pull
+4. **Si necesitás modificar un tipo en `src/types/`**: proponelo en el grupo, DEV 3 lo cambia en `main`, todos hacen pull
+5. **Antes de mergear**: SIEMPRE hacer `git pull origin main --rebase` primero
+
+### Orden de trabajo
+
+```
+main (scaffolding completo) ← ya está
+  ├── TODOS: git checkout -b {tu-branch}
+  ├── TODOS: trabajan en sus carpetas exclusivas
+  ├── TODOS: crean archivos NUEVOS, reemplazan placeholders
+  └── Merge: cuando una feature está lista, PR o merge a main
+```
+
+---
+
 ## Timeline (~30 horas restantes)
 
-### Fase 1: Foundation (Horas 0-3)
-- TODOS: Clonar repo, instalar deps
-- DEV 2: Setup Expo + navigation + design system
-- DEV 1: Componentes de rutina con mock data
-- DEV 3: Supabase project + schema + auth
-- DEV 4: Claude API + system prompt + primer tool
+### Fase 1: Arranque Inmediato (Horas 0-3)
+- TODOS: Clonar repo, `npm install`, verificar que la app corre
+- DEV 1: Reemplazar placeholder de routine.tsx, crear componentes
+- DEV 2: Reemplazar placeholders de index.tsx y coach.tsx, crear componentes UI
+- DEV 3: Crear proyecto Supabase, aplicar migración SQL, implementar services
+- DEV 4: Implementar CoachEngine con Claude API, crear primer tool
 
 ### Fase 2: Core (Horas 3-14)
 - DEV 1: Rutina completa (calendar, day view, exercise cards)
