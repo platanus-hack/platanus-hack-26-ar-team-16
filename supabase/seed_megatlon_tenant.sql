@@ -14,21 +14,13 @@ on conflict (slug) do update
       primary_color = excluded.primary_color,
       logo_url = excluded.logo_url;
 
--- 2. Optional: assign demo user to Megatlon tenant.
---    Pick ONE option — leave both commented until Dante decides.
---
---    OPTION A (simplest — reuse existing demo user):
---    update public.profiles
---      set tenant_slug = 'megatlon'
---      where id = (select id from auth.users where email = 'demo@gohan.ai');
---
---    OPTION B (cleaner — separate user per tenant):
---      Create demo-megatlon@gohan.ai via the Auth admin API,
---      then copy the routine:
---
---    insert into public.routines (user_id, name, description, is_active)
---      select '<new-user-id>', name, description, is_active
---      from public.routines
---      where user_id = (select id from auth.users where email = 'demo@gohan.ai')
---        and is_active = true;
---    -- (then copy routine_days and routine_exercises in the same way)
+-- 2. Assign demo user to Megatlon tenant — OPTION A applied.
+--    The original PR draft wrote `set tenant_slug = 'megatlon'` but the
+--    profiles table stores `tenant_id` (FK to tenants.id), not a slug.
+--    The version below is what was actually executed against gohan-ai.
+update public.profiles
+  set tenant_id = (select id from public.tenants where slug = 'megatlon')
+  where id = (select id from auth.users where email = 'demo@gohan.ai');
+
+-- (OPTION B left out — once a tenant has its own demo user, copying routines
+--  across users is a fresh migration, not a seed.)

@@ -43,7 +43,10 @@ BEGIN
     training_days_per_week = 3,
     goals = ARRAY['hipertrofia', 'fuerza'],
     onboarding_completed = TRUE,
-    tenant_id = (SELECT id FROM tenants WHERE slug = 'smartfit')
+    -- Megatlon is the primary demo tenant (PR #10 wired the shell to it).
+    -- Re-running this seed should not silently downgrade the demo user
+    -- back to smartfit.
+    tenant_id = (SELECT id FROM tenants WHERE slug = 'megatlon')
   WHERE id = v_user;
 
   -- Wipe any old routines for this user (cascade clears days + exercises)

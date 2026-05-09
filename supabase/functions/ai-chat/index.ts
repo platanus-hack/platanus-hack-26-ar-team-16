@@ -192,6 +192,14 @@ async function executeCreateRoutine(userId: string, input: any) {
     await supabaseAdmin.from('routine_exercises').insert(exercises);
   }
 
+  // Creating a routine ends onboarding — without this, the next message rebuilds
+  // the system prompt with ONBOARDING MODE still on, and the AI re-asks the
+  // discovery questions even though it already has the answers.
+  await supabaseAdmin
+    .from('profiles')
+    .update({ onboarding_completed: true })
+    .eq('id', userId);
+
   return { success: true, routine_id: routine.id };
 }
 
