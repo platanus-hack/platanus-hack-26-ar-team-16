@@ -30,6 +30,12 @@ Thumbs.db
 mcp-server/node_modules/
 mcp-server/dist/
 
+# Landing (Next.js)
+landing/.next/
+landing/.vercel/
+landing/dist/
+landing/out/
+
 # Misc
 npm-debug.*
 *.jks
