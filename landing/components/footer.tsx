@@ -19,8 +19,7 @@ export function Footer() {
             </span>
           </p>
           <p className="mt-6 text-sm text-[var(--color-paper)]/55 max-w-sm leading-relaxed">
-            Built during Platanus Hack 26 in Buenos Aires.
-            Track: Vertical AI.
+            Made in Buenos Aires for the apps your members already open.
           </p>
         </div>
         <div className="md:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-8 text-sm">
@@ -38,7 +37,6 @@ export function Footer() {
             items={[
               ["Live app", "https://gohan-app-theta.vercel.app"],
               ["GitHub", "https://github.com/platanus-hack/platanus-hack-26-ar-team-16"],
-              ["Track", "https://hack.platan.us"],
             ]}
           />
           <FooterCol

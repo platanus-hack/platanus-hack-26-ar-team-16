@@ -6,6 +6,7 @@ export function Marquee() {
     { name: "SportClub", src: "/logos/sportclub.png" },
     { name: "Always", src: "/logos/always.png" },
     { name: "Smart Fit", src: "/logos/smartfit.svg" },
+    { name: "Fiter", src: "/logos/fiter.svg" },
     { name: "Anytime Fitness", src: "/logos/anytimefitness.svg" },
     { name: "Crunch", src: "/logos/crunch.svg" },
   ];
