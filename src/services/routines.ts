@@ -4,7 +4,10 @@ import type {
   RoutineDay,
   RoutineExercise,
 } from '../types';
+import type { Database } from '../types/database';
 import { supabase } from './supabase';
+
+type RoutineExerciseUpdate = Database['public']['Tables']['routine_exercises']['Update'];
 
 interface RoutineExerciseRow {
   id: string;
@@ -126,7 +129,7 @@ export async function updateExercise(
   exerciseId: string,
   data: { sets?: number; reps?: number; weightKg?: number | null; notes?: string | null }
 ): Promise<void> {
-  const updates: Record<string, unknown> = {};
+  const updates: RoutineExerciseUpdate = {};
   if (data.sets !== undefined) updates.sets = data.sets;
   if (data.reps !== undefined) updates.reps = data.reps;
   if (data.weightKg !== undefined) updates.weight_kg = data.weightKg;

@@ -1,19 +1,9 @@
 import type { FitnessLevel, UserProfile } from '../types';
+import type { Database } from '../types/database';
 import { supabase } from './supabase';
 
-interface ProfileRow {
-  id: string;
-  tenant_id: string;
-  display_name: string;
-  avatar_url: string | null;
-  fitness_level: FitnessLevel;
-  equipment_available: string[];
-  injuries: string[];
-  training_days_per_week: number;
-  goals: string[];
-  onboarding_completed: boolean;
-  created_at: string;
-}
+type ProfileRow = Database['public']['Tables']['profiles']['Row'];
+type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
 
 function rowToProfile(row: ProfileRow): UserProfile {
   return {
@@ -21,7 +11,7 @@ function rowToProfile(row: ProfileRow): UserProfile {
     tenantId: row.tenant_id,
     displayName: row.display_name,
     avatarUrl: row.avatar_url,
-    fitnessLevel: row.fitness_level,
+    fitnessLevel: row.fitness_level as FitnessLevel,
     equipmentAvailable: row.equipment_available ?? [],
     injuries: row.injuries ?? [],
     trainingDaysPerWeek: row.training_days_per_week,
@@ -46,7 +36,7 @@ export async function updateProfile(
   userId: string,
   data: Partial<UserProfile>
 ): Promise<void> {
-  const updates: Record<string, unknown> = {};
+  const updates: ProfileUpdate = {};
   if (data.displayName !== undefined) updates.display_name = data.displayName;
   if (data.avatarUrl !== undefined) updates.avatar_url = data.avatarUrl;
   if (data.fitnessLevel !== undefined) updates.fitness_level = data.fitnessLevel;
