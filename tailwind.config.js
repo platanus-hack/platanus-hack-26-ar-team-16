@@ -8,6 +8,9 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // Demo fallback: SmartFit orange. Replace with a tenant-aware CSS
+        // variable once Ale wires the theme system.
+        primary: '#FF6B00',
         brand: {
           50: '#EEF2FF',
           100: '#E0E7FF',
