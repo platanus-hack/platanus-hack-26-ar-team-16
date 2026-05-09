@@ -1,0 +1,1 @@
+export { megatlonTenant } from './megatlon';
