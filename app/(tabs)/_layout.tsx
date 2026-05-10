@@ -12,11 +12,9 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
-import { useTenantStore } from '../../src/store/useTenantStore';
-import { useAuthStore } from '../../src/store/useAuthStore';
 
 /* ─── Megatlon brand tokens ─────────────────────────────────────── */
 const MT = {
@@ -147,19 +145,6 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabsLayout() {
-  const tenantSlug = useTenantStore((s) => s.tenant?.slug ?? null);
-  const isTenantLoaded = useTenantStore((s) => s.isLoaded);
-  const isAuthLoading = useAuthStore((s) => s.isLoading);
-
-  // While auth or tenant is still resolving, assume Megatlon to avoid
-  // flashing the white DefaultTabsLayout. Only fall back to Default once
-  // we know for certain the tenant is not 'megatlon'.
-  const showDefault = isTenantLoaded && !isAuthLoading && tenantSlug !== 'megatlon';
-
-  if (showDefault) {
-    return <DefaultTabsLayout />;
-  }
-
   return (
     <Tabs
       screenOptions={{
@@ -177,57 +162,3 @@ export default function TabsLayout() {
   );
 }
 
-/**
- * Fallback for non-Megatlon tenants. Ale can replace this with his real
- * default layout — it's a 1-line swap.
- */
-function DefaultTabsLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#94A3B8',
-        tabBarStyle: {
-          backgroundColor: '#FFFFFF',
-          borderTopColor: '#E2E8F0',
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 4,
-        },
-        headerStyle: { backgroundColor: '#FFFFFF' },
-        headerTintColor: '#0F172A',
-        headerTitleStyle: { fontWeight: '700' },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="routine"
-        options={{
-          title: 'Rutina',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="barbell-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="coach"
-        options={{
-          title: 'Gohan AI',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubble-ellipses-outline" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen name="qr" options={{ href: null }} />
-      <Tabs.Screen name="mas" options={{ href: null }} />
-    </Tabs>
-  );
-}
