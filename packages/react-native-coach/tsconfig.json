@@ -30,7 +30,6 @@
     "dist",
     "../../node_modules",
     "../../app",
-    "../../src/modules/ai",
     "../../src/components/StandaloneCoachProvider.tsx",
     "../../src/services/supabase.ts"
   ]

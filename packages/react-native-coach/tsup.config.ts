@@ -21,7 +21,7 @@
 //
 // What we bundle: everything under `../../src/` that the public API
 // transitively reaches, except the excluded files (`app/`, `(auth)`,
-// `services/supabase.ts`, `StandaloneCoachProvider.tsx`, `modules/ai/`).
+// `services/supabase.ts`, `StandaloneCoachProvider.tsx`).
 
 import { defineConfig } from 'tsup';
 
