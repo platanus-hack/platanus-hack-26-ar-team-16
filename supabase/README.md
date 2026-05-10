@@ -3,7 +3,7 @@
 Owner: @DanteDia
 
 > **Project is already provisioned.** Ref: `cjflwpcxfprxxjbhjxlo` (region `sa-east-1`).
-> Migrations 001-004 are applied. The `ai-chat` edge function is deployed.
+> Migrations 001-005 are applied. The `ai-chat` edge function is deployed.
 > Credentials live in `.env.local` (gitignored). Get them from Dante or the
 > Supabase dashboard if you need to set up a fresh device.
 
@@ -13,7 +13,7 @@ Owner: @DanteDia
 - `migrations/002_rls_and_storage.sql` — RLS policies, `handle_new_user` trigger, `chat-audio` storage bucket.
 - `migrations/003_realtime_routines.sql` — adds `routines` to the realtime publication (so `is_active` flips reach subscribers).
 - `migrations/004_external_identity_and_api_keys.sql` — Phase 1 of the B2B refactor (see ARCHITECTURE.md §4/§10/§11): adds external identity columns + `tenant_api_keys` + `tenant_signing_secrets` + `usage_events`.
-- `migrations/005_relax_profiles_auth_fk.sql` — drops the FK `profiles.id → auth.users.id` so gym-origin users (no Supabase Auth row) can have profiles. **Not applied yet** — see "Migration log" below.
+- `migrations/005_relax_profiles_auth_fk.sql` — drops the FK `profiles.id → auth.users.id` so gym-origin users (no Supabase Auth row) can have profiles. Standalone signup keeps working via the trigger.
 - `functions/ai-chat/` — edge function that proxies Claude for the standalone consumer flow (owner: @Juampiman).
 - `functions/api-chat/`, `functions/api-keys/`, `functions/api-session/` — B2B endpoints from the §10 architecture. Need migration 005 applied to be fully functional for gym-origin users.
 
@@ -25,7 +25,7 @@ Owner: @DanteDia
 | `20260509081026` | rls_and_storage | day 0 | per-user RLS + chat-audio bucket |
 | `20260509084822` | realtime_routines | day 0 | adds `routines` to realtime publication |
 | `20260510051339` | external_identity_and_api_keys | 2026-05-10 | Phase 1 B2B foundation. See "What 004 changed" below |
-| — | relax_profiles_auth_fk (005) | **PENDING** | Removes FK profile→auth.users. Standalone signup keeps working via the trigger; required only to unblock gym-origin user inserts. Apply when the api-session function is ready to serve gym JWTs. |
+| `20260510053023` | relax_profiles_auth_fk | 2026-05-10 | Drops FK profile→auth.users. Unblocks gym-origin user inserts. See "What 005 changed" below |
 
 ### What 004 changed (operational summary)
 
@@ -42,6 +42,19 @@ Aplicada 2026-05-10 contra prod (`cjflwpcxfprxxjbhjxlo`). Cambios verificados po
 **Reversibilidad**: todo es reversible (DROP COLUMN, DROP TABLE, restaurar trigger viejo). No hay data loss.
 
 **Razón del cambio** — necesario para que el modelo de auth multi-source (§10 ARCHITECTURE) funcione: tres caminos (gym JWT / Supabase JWT / API key) que convergen en `profiles` keyed por `(tenant_id, external_id)`. Sin estas columnas, no se puede distinguir un user de Megatlon del mismo email que un user standalone, ni rastrear de qué IdP vino.
+
+### What 005 changed (operational summary)
+
+Aplicada 2026-05-10 contra prod. Cambio chico pero conceptualmente importante.
+
+- **`profiles.id` ya no es FK a `auth.users.id`**. El constraint se llamaba `profiles_id_fkey` (auto-generado). El DROP se hizo dinámicamente buscando por `confrelid='auth.users'::regclass` para ser robusto a renames.
+- **`profiles.id` mantiene PK** + ahora tiene `DEFAULT gen_random_uuid()` explícito. Las inserts gym-origin (vía `api-session` con JWT del gym) van a generar un UUID nuevo automáticamente sin tener que existir en `auth.users`.
+- **Standalone signup sigue intacto**: el trigger `handle_new_user()` (refreshed en 004) explícitamente setea `profiles.id = NEW.id` (= `auth.users.id`), así que las RLS policies con `auth.uid() = id` siguen matcheando para users standalone.
+- **RLS implications para gym-origin users**: como su `profiles.id` es UUID random (no `auth.uid()`), las self-access policies que usan `auth.uid() = id` simplemente no matchean. Eso es correcto — gym-origin users no autentican vía Supabase Auth y nunca tienen `auth.uid()` set en sus calls. Acceso mediado por edge functions con service role.
+
+**Verificación post-apply**: 5/5 profiles existentes siguen teniendo su `profiles.id` igual a un `auth.users.id` válido (verificado con join). Cero data loss, cero comportamiento alterado para users standalone.
+
+**Reversibilidad**: re-add del FK en una sola sentencia. Ningún row va a romper porque todos los current profiles siguen teniendo su `id` apuntando a un `auth.users.id`.
 
 ## How to run from a fresh checkout
 
