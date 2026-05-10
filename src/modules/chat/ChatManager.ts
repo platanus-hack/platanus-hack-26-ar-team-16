@@ -1,8 +1,9 @@
 import { useAuthStore, useChatStore } from '@/store';
-import type { ChatMessage } from '@/types';
-import { buildConversationHistory, streamChat } from '@/modules/ai';
-import type { ChatRequest } from '@/modules/ai';
+import type { ApiClient, ChatMessage } from '@/types';
+import { buildConversationHistory, streamChat } from '@/services/api';
+import type { ChatRequest } from '@/services/api';
 import { markOnboardingCompleted } from '@/services';
+import { createApiClient } from '@/services/api/client';
 
 const MOCK_CONVERSATION_ID = 'mock-conversation';
 
@@ -17,6 +18,42 @@ export function generateTempId(): string {
 
 interface SendOptions {
   audioUrl?: string | null;
+}
+
+interface ChatTransport {
+  apiClient: ApiClient;
+  endpoint: string;
+}
+
+// Module-level transport, set by `<CoachProvider>` on mount via
+// `setChatTransport`. We use module state instead of forcing every call site
+// (chat input, audio button, ...) to thread an ApiClient down through props,
+// while still keeping the transport injectable for the embedded module. Side
+// effect: there can only be one active transport per JS bundle — fine for
+// the shipped apps where exactly one CoachProvider is mounted.
+let activeTransport: ChatTransport | null = null;
+
+export function setChatTransport(transport: ChatTransport | null): void {
+  activeTransport = transport;
+}
+
+/** Standalone-app fallback: if no provider has registered a transport, build
+ *  one from the legacy `EXPO_PUBLIC_SUPABASE_*` env vars so the existing
+ *  `ai-chat` endpoint still works without any plumbing changes. */
+function getOrBuildTransport(): ChatTransport {
+  if (activeTransport) return activeTransport;
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+  return {
+    apiClient: createApiClient({
+      apiBaseUrl: `${url.replace(/\/$/, '')}/functions/v1`,
+      anonKey,
+      // Standalone fallback — when no provider sets a real getter we degrade
+      // to the anon key, matching the old `CoachEngine.ts` behaviour.
+      getAuthToken: async () => null,
+    }),
+    endpoint: 'ai-chat',
+  };
 }
 
 function buildUserProfileForRequest(): ChatRequest['userProfile'] {
@@ -79,7 +116,10 @@ export async function sendUserMessage(
     s.setActiveTool(null);
   };
 
+  const transport = getOrBuildTransport();
   streamChat(
+    transport.apiClient,
+    transport.endpoint,
     { userMessage: trimmed, conversationHistory, userProfile },
     {
       onToken: (token) => {
