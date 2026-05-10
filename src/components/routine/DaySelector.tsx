@@ -9,10 +9,30 @@ interface DaySelectorProps {
   onSelect: (dayId: string) => void;
 }
 
-const DAY_ABBREVS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+// Aligned to Postgres / JS Date day_of_week convention: 0=Sun ... 6=Sat.
+// Indexed directly by `day.day_index` (the DB's `day_of_week`). Previously
+// this array was Lun-first, which silently shifted every label by one day
+// vs. what the AI / DB believed the day was — user saw an exercise under
+// "VIE" but the DB had it on day_of_week=4 (Thursday), so when they asked
+// Gohan to edit "el viernes" the bot looked at day_of_week=5 and found
+// nothing. Aligning to the DB convention fixes the mismatch.
+const DAY_ABBREVS = ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'];
+
+// Visual order: Monday first, Sunday last (Argentina convention). The DB
+// stores day_of_week with Sunday=0, but for the pill row the user expects
+// to see the week starting on Monday. Sort doesn't change day.day_index.
+function sortMondayFirst(days: RoutineDay[]): RoutineDay[] {
+  return [...days].sort((a, b) => {
+    const orderA = a.day_index === 0 ? 7 : a.day_index;
+    const orderB = b.day_index === 0 ? 7 : b.day_index;
+    return orderA - orderB;
+  });
+}
 
 export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps) {
   if (!days.length) return null;
+
+  const orderedDays = sortMondayFirst(days);
 
   return (
     <ScrollView
@@ -20,7 +40,7 @@ export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps)
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.container}
     >
-      {days.map((day, idx) => {
+      {orderedDays.map((day, idx) => {
         const isActive = day.id === selectedDayId;
         const abbrev = DAY_ABBREVS[day.day_index] ?? DAY_ABBREVS[idx % 7];
         const isRest = !day.exercises?.length;
