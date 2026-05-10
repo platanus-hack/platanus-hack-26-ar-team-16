@@ -27,7 +27,19 @@
       "Bash(node -e \"const {StreamableHTTPServerTransport} = require\\('@modelcontextprotocol/sdk/server/streamableHttp.js'\\); console.log\\('ok'\\)\")",
       "Bash(node --require ts-node/register/transpile-only --test test/http-transport.test.ts)",
       "Bash(node --require ts-node/register/transpile-only -e ' *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(git fetch *)",
+      "Bash(git checkout *)",
+      "Bash(git merge *)",
+      "Read(//tmp/**)",
+      "Bash(grep *)",
+      "Bash(echo \"exit: $?\")",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx expo *)",
+      "Bash(timeout 30 bash -c 'until grep -qE \"Web is waiting|Logs for your project|Metro waiting|Web Bundling|http://localhost\" \"C:/Users/aleni/AppData/Local/Temp/claude/C--Users-aleni-Desktop-platanus-hack-26-ar-team-16/f8860de9-7406-4b89-be6a-3b86f32fcdc9/tasks/bk4cqj1jw.output\" 2>/dev/null; do sleep 1; done')",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(git push *)"
     ]
   }
 }

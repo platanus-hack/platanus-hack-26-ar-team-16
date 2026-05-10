@@ -133,11 +133,11 @@ export default function LoginScreen() {
   if (autoLoginActive) {
     return (
       <View
-        className={`flex-1 items-center justify-center ${theme.tenant.classNames.pageBg}`}
-        style={{ gap: 16 }}
+        className="flex-1 items-center justify-center"
+        style={{ gap: 16, backgroundColor: theme.tenant.colors.background }}
       >
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text className={`text-sm ${theme.tenant.classNames.textMuted}`}>
+        <Text className="text-sm" style={{ color: theme.tenant.colors.textMuted }}>
           Cargando demo…
         </Text>
         {error && (
@@ -152,7 +152,8 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className={`flex-1 ${theme.tenant.classNames.pageBg}`}
+      className="flex-1"
+      style={{ backgroundColor: theme.tenant.colors.background }}
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
@@ -173,10 +174,16 @@ export default function LoginScreen() {
                 <Ionicons name="barbell" size={32} color="#FFFFFF" />
               </View>
             )}
-            <Text className={`text-3xl font-bold mt-4 ${theme.tenant.classNames.text}`}>
+            <Text
+              className="text-3xl font-bold mt-4"
+              style={{ color: theme.tenant.colors.text }}
+            >
               {theme.brandName}
             </Text>
-            <Text className={`text-base mt-1 ${theme.tenant.classNames.textMuted}`}>
+            <Text
+              className="text-base mt-1"
+              style={{ color: theme.tenant.colors.textMuted }}
+            >
               Tu personal trainer con IA
             </Text>
           </View>
@@ -230,7 +237,10 @@ export default function LoginScreen() {
               onPress={handleGoogle}
             />
             <Pressable onPress={toggleMode} className="items-center pt-2">
-              <Text className={`text-sm ${theme.tenant.classNames.textMuted}`}>
+              <Text
+                className="text-sm"
+                style={{ color: theme.tenant.colors.textMuted }}
+              >
                 {isRegister ? '¿Ya tenés cuenta? ' : '¿No tenés cuenta? '}
                 <Text className="font-semibold" style={{ color: theme.primary }}>
                   {isRegister ? 'Iniciá sesión' : 'Registrate'}
