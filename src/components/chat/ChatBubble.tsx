@@ -21,13 +21,13 @@ export function ChatBubble({ message, isStreaming = false }: ChatBubbleProps) {
           borderRadius: 16,
           ...(isUser
             ? { borderBottomRightRadius: 6, backgroundColor: theme.primary }
-            : { borderBottomLeftRadius: 6, backgroundColor: '#F1F5F9' }),
+            : { borderBottomLeftRadius: 6, backgroundColor: '#1F1F1F' }),
         }}
       >
-        <Text style={{ fontSize: 16, color: isUser ? '#FFFFFF' : '#0F172A' }}>
+        <Text style={{ fontSize: 16, color: '#FFFFFF' }}>
           {message.content}
           {isStreaming && !isUser && (
-            <Text style={{ color: '#94A3B8' }}>▍</Text>
+            <Text style={{ color: '#888888' }}>▍</Text>
           )}
         </Text>
       </View>
