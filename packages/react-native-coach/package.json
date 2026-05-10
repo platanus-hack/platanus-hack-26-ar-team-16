@@ -1,0 +1,41 @@
+{
+  "name": "@gohan-ai/react-native",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Embeddable React Native module for Gohan AI personal trainer",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "react-native": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "EXAMPLE.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.74",
+    "react-native-svg": ">=15",
+    "nativewind": ">=4"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
+    "react-native-sse": "^1.2.1",
+    "zustand": "^5.0.13"
+  },
+  "devDependencies": {
+    "tsup": "^8.3.5",
+    "typescript": "~5.9.2"
+  }
+}

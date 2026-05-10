@@ -56,10 +56,9 @@ NativeWind v4 is configured and works on BOTH web and mobile. Use Tailwind `clas
 
 > Heads up to teammates and their Claudes: this is real, not mock. Do not recreate.
 
-- **Supabase project**: `gohan-ai`, ref `cjflwpcxfprxxjbhjxlo`, region `sa-east-1`, free tier
-- **Project URL**: `https://cjflwpcxfprxxjbhjxlo.supabase.co`
+- **Supabase project**: `gohan-ai`, region `sa-east-1`, free tier — project ref and URL in `.env.local` (gitignored)
 - **Edge function**: `ai-chat` deployed at `/functions/v1/ai-chat`, no-verify-jwt (gateway still requires anon key)
-- **`ANTHROPIC_API_KEY`**: set as edge function secret (rotate the leaked one when convenient)
+- **`ANTHROPIC_API_KEY`**: set as edge function secret — never commit
 - **`.env.local`** with real creds is gitignored — ask Dante or pull from `.env.example` shape
 
 ### Tenants seeded
@@ -67,8 +66,7 @@ NativeWind v4 is configured and works on BOTH web and mobile. Use Tailwind `clas
 - `smartfit` — "SmartFit Demo", `#FF6B00` (orange). Used for the demo user.
 
 ### Demo user (use this for the live demo, no onboarding needed)
-- **Email**: `demo@gohan.ai`
-- **Password**: `GohanDemo2026!`
+- **Credentials**: stored in `.env.local` (gitignored) — ask Dante
 - **Tenant**: `smartfit` (orange branding)
 - **State**: `onboarding_completed = true`, profile filled in, active routine "Push / Pull / Legs" (3 days, 18 exercises) already in DB
 - **Reset to canonical state**: re-run `scripts/seed-demo.sql` in the Supabase SQL editor
@@ -98,15 +96,18 @@ Pass header `x-no-stream: true` to get the full JSON `{content, toolCalls, routi
 ### How to smoke-test the stack quickly
 
 ```bash
+# Source creds from .env.local first: set $EXPO_PUBLIC_SUPABASE_URL,
+# $EXPO_PUBLIC_SUPABASE_ANON_KEY, $DEMO_EMAIL, $DEMO_PASSWORD, $DEMO_USER_ID
+
 # 1. Sign in demo user
 JWT=$(curl -sS -X POST "$EXPO_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password" \
   -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H "Content-Type: application/json" \
-  -d '{"email":"demo@gohan.ai","password":"GohanDemo2026!"}' \
+  -d "{\"email\":\"$DEMO_EMAIL\",\"password\":\"$DEMO_PASSWORD\"}" \
   | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
 
 # 2. Hit the edge function (non-streaming for easy inspection)
 curl -sS -X POST "$EXPO_PUBLIC_SUPABASE_URL/functions/v1/ai-chat" \
   -H "Content-Type: application/json" -H "x-no-stream: true" \
   -H "apikey: $EXPO_PUBLIC_SUPABASE_ANON_KEY" -H "Authorization: Bearer $JWT" \
-  -d '{"userMessage":"hola","userProfile":{"id":"d14aca31-5ece-465a-b02e-ebdd79384962","onboardingCompleted":true}}'
+  -d "{\"userMessage\":\"hola\",\"userProfile\":{\"id\":\"$DEMO_USER_ID\",\"onboardingCompleted\":true}}"
 ```

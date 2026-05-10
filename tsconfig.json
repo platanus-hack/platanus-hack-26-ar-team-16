@@ -18,6 +18,8 @@
     "node_modules",
     "mcp-server",
     "supabase/functions",
-    "landing"
+    "landing",
+    "dashboard",
+    "packages"
   ]
 }

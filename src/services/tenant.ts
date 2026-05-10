@@ -1,5 +1,12 @@
 import type { Tenant } from '../types';
+import type { Database } from '../types/database';
 import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type Db = SupabaseClient<Database>;
+function db(client?: Db): Db {
+  return client ?? (supabase as Db);
+}
 
 interface TenantRow {
   id: string;
@@ -33,8 +40,8 @@ function rowToTenant(row: TenantRow): Tenant {
   };
 }
 
-export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
-  const { data, error } = await supabase
+export async function getTenantBySlug(slug: string, client?: Db): Promise<Tenant | null> {
+  const { data, error } = await db(client)
     .from('tenants')
     .select('*')
     .eq('slug', slug)
@@ -44,8 +51,8 @@ export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
   return data ? rowToTenant(data as TenantRow) : null;
 }
 
-export async function getTenantById(id: string): Promise<Tenant | null> {
-  const { data, error } = await supabase
+export async function getTenantById(id: string, client?: Db): Promise<Tenant | null> {
+  const { data, error } = await db(client)
     .from('tenants')
     .select('*')
     .eq('id', id)
@@ -55,10 +62,10 @@ export async function getTenantById(id: string): Promise<Tenant | null> {
   return data ? rowToTenant(data as TenantRow) : null;
 }
 
-export async function getDefaultTenant(): Promise<Tenant> {
+export async function getDefaultTenant(client?: Db): Promise<Tenant> {
   const slug = process.env.EXPO_PUBLIC_DEFAULT_TENANT ?? 'default';
   try {
-    const remote = await getTenantBySlug(slug);
+    const remote = await getTenantBySlug(slug, client);
     if (remote) return remote;
   } catch {
     // network/RLS error — fall through to local default so the UI can still render

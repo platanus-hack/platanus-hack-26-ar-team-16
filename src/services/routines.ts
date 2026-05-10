@@ -6,8 +6,20 @@ import type {
 } from '../types';
 import type { Database } from '../types/database';
 import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type RoutineExerciseUpdate = Database['public']['Tables']['routine_exercises']['Update'];
+
+// All service functions accept an optional `db` Supabase client so the same
+// code can run against (a) the global standalone client (default), or (b) a
+// request-scoped client built by `CoachProvider` from the host's auth token.
+// The actual HTTP wiring is `ApiClient` (see `src/services/api/client.ts`);
+// PostgREST traffic stays on supabase-js until we ship public REST endpoints
+// for routines / profiles in Phase 3.
+type Db = SupabaseClient<Database>;
+function db(client?: Db): Db {
+  return client ?? (supabase as Db);
+}
 
 interface RoutineExerciseRow {
   id: string;
@@ -102,8 +114,11 @@ const ROUTINE_SELECT = `
   )
 `;
 
-export async function getActiveRoutine(userId: string): Promise<Routine | null> {
-  const { data, error } = await supabase
+export async function getActiveRoutine(
+  userId: string,
+  client?: Db,
+): Promise<Routine | null> {
+  const { data, error } = await db(client)
     .from('routines')
     .select(ROUTINE_SELECT)
     .eq('user_id', userId)
@@ -114,8 +129,11 @@ export async function getActiveRoutine(userId: string): Promise<Routine | null> 
   return data ? rowToRoutine(data as RoutineRow) : null;
 }
 
-export async function getRoutineById(routineId: string): Promise<Routine | null> {
-  const { data, error } = await supabase
+export async function getRoutineById(
+  routineId: string,
+  client?: Db,
+): Promise<Routine | null> {
+  const { data, error } = await db(client)
     .from('routines')
     .select(ROUTINE_SELECT)
     .eq('id', routineId)
@@ -127,7 +145,8 @@ export async function getRoutineById(routineId: string): Promise<Routine | null>
 
 export async function updateExercise(
   exerciseId: string,
-  data: { sets?: number; reps?: number; weightKg?: number | null; notes?: string | null }
+  data: { sets?: number; reps?: number; weightKg?: number | null; notes?: string | null },
+  client?: Db,
 ): Promise<void> {
   const updates: RoutineExerciseUpdate = {};
   if (data.sets !== undefined) updates.sets = data.sets;
@@ -137,7 +156,7 @@ export async function updateExercise(
 
   if (Object.keys(updates).length === 0) return;
 
-  const { error } = await supabase
+  const { error } = await db(client)
     .from('routine_exercises')
     .update(updates)
     .eq('id', exerciseId);
@@ -146,11 +165,26 @@ export async function updateExercise(
 
 export async function markExerciseCompleted(
   exerciseId: string,
-  completed: boolean
+  completed: boolean,
+  client?: Db,
 ): Promise<void> {
-  const { error } = await supabase
+  const { error } = await db(client)
     .from('routine_exercises')
     .update({ completed })
     .eq('id', exerciseId);
   if (error) throw error;
+}
+
+/** Read-only routine IDs for a user — used by useRealtimeRoutine to scope
+ *  postgres_changes filters away from cross-tenant leaks (§11). */
+export async function getRoutineIdsForUser(
+  userId: string,
+  client?: Db,
+): Promise<string[]> {
+  const { data, error } = await db(client)
+    .from('routines')
+    .select('id')
+    .eq('user_id', userId);
+  if (error) throw error;
+  return ((data ?? []) as { id: string }[]).map((r) => r.id);
 }

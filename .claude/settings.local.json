@@ -2,7 +2,32 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(npm outdated *)",
+      "Bash(npm audit *)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); m=d.get\\('metadata',{}\\).get\\('vulnerabilities',{}\\); print\\('root:',m\\)\")",
+      "Bash(npm view *)",
+      "Bash(npx --yes expo@latest install expo@^55.0.0)",
+      "Bash(npx --yes expo-doctor)",
+      "PowerShell(Test-Path *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(npx tsc *)",
+      "Bash(git stash *)",
+      "Bash(npx tsup *)",
+      "Bash(ls C:\\\\\\\\Users\\\\\\\\aleni\\\\\\\\Desktop\\\\\\\\platanus-hack-26-ar-team-16\\\\\\\\mcp-server\\\\\\\\node_modules\\\\\\\\@modelcontextprotocol\\\\\\\\sdk\\\\\\\\dist\\\\\\\\esm\\\\\\\\server)",
+      "Bash(cat \"C:\\\\\\\\Users\\\\\\\\aleni\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\C--Users-aleni-Desktop-platanus-hack-26-ar-team-16\\\\\\\\e9850ae1-7bc3-4c28-b59b-3d39c416ebda\\\\\\\\tasks\\\\\\\\b7c7gxuk6.output\")",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --extendedDiagnostics)",
+      "Bash(git rm *)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npm run build)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=4096\" npx tsc --noEmit --skipLibCheck src/components/GohanCoach.tsx src/services/api/client.ts src/types/coach.ts)",
+      "Bash(NODE_OPTIONS=\"--max-old-space-size=8192\" npx tsc --noEmit --skipLibCheck)",
+      "Bash(node -e \"const {StreamableHTTPServerTransport} = require\\('@modelcontextprotocol/sdk/server/streamableHttp.js'\\); console.log\\('ok'\\)\")",
+      "Bash(node --require ts-node/register/transpile-only --test test/http-transport.test.ts)",
+      "Bash(node --require ts-node/register/transpile-only -e ' *)",
+      "Bash(npm test *)"
     ]
   }
 }
