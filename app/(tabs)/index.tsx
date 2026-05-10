@@ -1,19 +1,7 @@
-/**
- * Inicio (home) — hardcoded Megatlon demo screen.
- *
- * Replicates the look of the real Megatlon Inicio tab so the visitor
- * navigating around feels they're inside the actual app. No real data.
- *
- * Before the live demo: swap Unsplash URLs for local assets to eliminate
- * latency and any Unsplash downtime risk.
- */
-
 import React from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const MT_BRAND = '#FF6B00';
 
 const NOVEDADES = [
   {
@@ -58,15 +46,11 @@ export default function InicioScreen() {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           paddingHorizontal: 16,
           paddingVertical: 12,
         }}
       >
-        <View style={{ width: 24 }} />
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '500', letterSpacing: 2 }}>
-          MEGATLON
-        </Text>
         <MaterialCommunityIcons name="bell-outline" size={22} color="#FFFFFF" />
       </View>
 
@@ -174,7 +158,7 @@ export default function InicioScreen() {
           ))}
         </ScrollView>
 
-        <View style={{ height: 96 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );

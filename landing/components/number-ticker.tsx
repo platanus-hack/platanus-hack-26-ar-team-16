@@ -21,35 +21,59 @@ export function NumberTicker({
   const ref = useRef<HTMLSpanElement>(null);
   const [display, setDisplay] = useState(typeof to === "number" ? format(0) : value);
 
+  // Keep the latest format/value/to/duration in refs so the effect can be a
+  // stable mount-once IO. Otherwise the parent re-renders continuously
+  // recreate the `format` arrow, the dep array changes every paint, the
+  // effect tears down and remounts mid-animation, and the user sees the
+  // counter flicker between its first two frames (0 and 1) forever.
+  const fmtRef = useRef(format);
+  const valRef = useRef(value);
+  const toRef = useRef(to);
+  const durRef = useRef(duration);
+  fmtRef.current = format;
+  valRef.current = value;
+  toRef.current = to;
+  durRef.current = duration;
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    let raf = 0;
     const obs = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
         obs.unobserve(el);
-        if (typeof to !== "number") {
-          // Non-numeric — just reveal once
-          setDisplay(value);
+
+        const target = toRef.current;
+        if (typeof target !== "number") {
+          setDisplay(valRef.current);
           return;
         }
+
         const start = performance.now();
-        let raf = 0;
+        const dur = durRef.current;
         const tick = (now: number) => {
-          const t = Math.min(1, (now - start) / duration);
+          const t = Math.min(1, (now - start) / dur);
           const eased = 1 - Math.pow(1 - t, 3);
-          setDisplay(format(eased * to));
-          if (t < 1) raf = requestAnimationFrame(tick);
-          else setDisplay(value);
+          setDisplay(fmtRef.current(eased * target));
+          if (t < 1) {
+            raf = requestAnimationFrame(tick);
+          } else {
+            setDisplay(valRef.current);
+          }
         };
         raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
       },
       { threshold: 0.5 }
     );
     obs.observe(el);
-    return () => obs.disconnect();
-  }, [value, to, duration, format]);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      obs.disconnect();
+    };
+  }, []);
 
   return <span ref={ref}>{display}</span>;
 }

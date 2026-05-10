@@ -41,8 +41,8 @@ export function MessageInput({
         paddingTop: 12,
         paddingBottom: 12,
         borderTopWidth: 1,
-        borderTopColor: '#E2E8F0',
-        backgroundColor: '#FFFFFF',
+        borderTopColor: '#1A1A1A',
+        backgroundColor: '#0F0F0F',
         gap: 8,
       }}
     >
@@ -54,7 +54,7 @@ export function MessageInput({
       <View
         style={{
           flex: 1,
-          backgroundColor: '#F1F5F9',
+          backgroundColor: '#1A1A1A',
           borderRadius: 16,
           paddingHorizontal: 16,
           paddingVertical: 10,
@@ -64,10 +64,10 @@ export function MessageInput({
           value={displayText}
           onChangeText={isRecording ? undefined : setText}
           placeholder={isRecording ? '🎤 Escuchando...' : 'Escribí un mensaje'}
-          placeholderTextColor={isRecording ? '#6366F1' : '#94A3B8'}
+          placeholderTextColor={isRecording ? '#6366F1' : '#666666'}
           editable={!disabled && !isRecording}
           multiline
-          style={{ fontSize: 16, color: '#0F172A', maxHeight: 128 }}
+          style={{ fontSize: 16, color: '#FFFFFF', maxHeight: 128 }}
           onSubmitEditing={handleSend}
         />
       </View>
@@ -80,10 +80,10 @@ export function MessageInput({
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: 20,
-          backgroundColor: canSend ? theme.primary : '#CBD5E1',
+          backgroundColor: canSend ? theme.primary : '#1A1A1A',
         }}
       >
-        <Ionicons name="send" size={18} color="#FFFFFF" />
+        <Ionicons name="send" size={18} color={canSend ? '#FFFFFF' : '#666666'} />
       </Pressable>
     </View>
   );

@@ -9,17 +9,10 @@ interface RoutineHeaderProps {
   onPressCalendar: () => void;
 }
 
-export function RoutineHeader({ selectedDay, onPressCalendar }: RoutineHeaderProps) {
-  const subtitle = selectedDay
-    ? [selectedDay.name.toUpperCase(), ...(selectedDay.muscle_groups ?? []).map(g => g.toUpperCase())].join(' · ')
-    : null;
-
+export function RoutineHeader({ onPressCalendar }: RoutineHeaderProps) {
   return (
     <View style={styles.wrap}>
-      <View style={styles.left}>
-        <Text style={styles.section}>MI ENTRENAMIENTO</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
-      </View>
+      <Text style={styles.section}>MI ENTRENAMIENTO</Text>
       <Pressable
         onPress={onPressCalendar}
         accessibilityRole="button"
@@ -38,25 +31,15 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 4,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  left: {
-    flex: 1,
-    paddingRight: 12,
   },
   section: {
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 1.5,
-    color: '#b8b8b8',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#FF6B00',
-    letterSpacing: 0.5,
+    color: '#B8B8B8',
+    textTransform: 'uppercase',
   },
   calBtn: {
     width: 40,

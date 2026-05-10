@@ -54,11 +54,7 @@ function MockQRCode({ size = 220 }: { size?: number }) {
 export default function QRScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
-      <View style={{ paddingTop: 8, paddingBottom: 24, alignItems: 'center' }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '500', letterSpacing: 2 }}>
-          MEGATLON
-        </Text>
-      </View>
+      <View style={{ paddingTop: 8, paddingBottom: 24 }} />
 
       <View style={{ alignItems: 'center', paddingHorizontal: 32, marginTop: 8 }}>
         <Text
@@ -80,7 +76,7 @@ export default function QRScreen() {
         <Text style={{ color: '#B8B8B8', fontSize: 13, marginTop: 12 }}>1</Text>
       </View>
 
-      <View style={{ height: 88 }} />
+      <View style={{ height: 16 }} />
     </SafeAreaView>
   );
 }

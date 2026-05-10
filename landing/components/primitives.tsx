@@ -1,23 +1,29 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 
-export function Logo({ className = "" }: { className?: string }) {
+// PNG-based wordmark glyph (the hex-G with dumbbells). Two versions:
+//   "dark"  - black logo with transparent background, for paper (light) surfaces
+//   "light" - white logo with transparent background, for ink (dark) surfaces
+// Both files live in /landing/public/ so they're served as static assets.
+export function Logo({
+  className = "",
+  variant = "dark",
+  size = 28,
+}: {
+  className?: string;
+  variant?: "dark" | "light";
+  size?: number;
+}) {
+  const src = variant === "light" ? "/logo-light.png" : "/logo.png";
   return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 22 22"
-      fill="none"
-      aria-hidden
+    <Image
+      src={src}
+      alt="Gohan AI"
+      width={size}
+      height={size}
       className={className}
-    >
-      <circle cx="11" cy="11" r="10" stroke="currentColor" strokeWidth="1.2" />
-      <path
-        d="M5.5 11h11M11 5.5v11"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
+      priority
+    />
   );
 }
 

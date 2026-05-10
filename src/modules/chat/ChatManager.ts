@@ -1,4 +1,4 @@
-import { useAuthStore, useChatStore } from '@/store';
+import { useAuthStore, useChatStore, useCoachStyleStore } from '@/store';
 import type { ApiClient, ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/services/api';
 import type { ChatRequest } from '@/services/api';
@@ -68,6 +68,7 @@ function buildUserProfileForRequest(): ChatRequest['userProfile'] {
     trainingDaysPerWeek: u.trainingDaysPerWeek,
     goals: u.goals,
     onboardingCompleted: u.onboardingCompleted,
+    coachStyle: useCoachStyleStore.getState().style,
   };
 }
 
@@ -167,15 +168,44 @@ export function pushAudioBubble(audioUrl: string): void {
   });
 }
 
+const ONBOARDING_INIT_CHIPS = [
+  '{"op":"add","path":"/root","value":"row"}',
+  '{"op":"add","path":"/elements/row","value":{"type":"Row","props":{"gap":8,"flexWrap":"wrap"},"children":["c1","c2"]}}',
+  '{"op":"add","path":"/elements/c1","value":{"type":"Chip","props":{"label":"Dale, vamos"},"on":{"press":{"action":"reply","params":{"text":"sí, vamos"}}},"children":[]}}',
+  '{"op":"add","path":"/elements/c2","value":{"type":"Chip","props":{"label":"Más tarde"},"on":{"press":{"action":"reply","params":{"text":"más tarde"}}},"children":[]}}',
+].join('\n');
+
 export function seedWelcomeMessage(): void {
   const store = useChatStore.getState();
   if (store.messages.length > 0) return;
+
+  const user = useAuthStore.getState().user;
+  const onboardingCompleted = user?.onboardingCompleted ?? false;
+
+  if (!onboardingCompleted) {
+    store.addMessage({
+      id: 'onboarding-init',
+      conversationId: MOCK_CONVERSATION_ID,
+      role: 'assistant',
+      content: `Hola, soy Gohan, tu coach AI. Para armarte una rutina personalizada, ¿te tiro unas preguntas rápidas para conocerte mejor?\n\n${ONBOARDING_INIT_CHIPS}`,
+      audioUrl: null,
+      createdAt: new Date().toISOString(),
+    });
+    return;
+  }
+
+  const style = useCoachStyleStore.getState().style;
+  const welcomeByStyle: Record<string, string> = {
+    amable: 'Hola, soy Gohan, tu coach personal. Contame tranquilo: ¿qué objetivo tenés, cuántos días podés entrenar y con qué equipamiento contás? Vamos a tu ritmo.',
+    intenso: 'Soy Gohan. Contame tu objetivo, días disponibles y equipamiento. Con eso te armo la rutina.',
+    picante: 'Buenas, soy Gohan. A ver, ¿qué querés lograr, cuántos días le metés y qué tenés para entrenar? Dale que no tengo todo el día.',
+  };
+
   store.addMessage({
     id: 'welcome-1',
     conversationId: MOCK_CONVERSATION_ID,
     role: 'assistant',
-    content:
-      'Hola, soy Gohan. Para armarte una rutina personalizada contame: ¿cuál es tu objetivo, cuántos días entrenás por semana y qué equipamiento tenés?',
+    content: welcomeByStyle[style] ?? welcomeByStyle.intenso,
     audioUrl: null,
     createdAt: new Date().toISOString(),
   });

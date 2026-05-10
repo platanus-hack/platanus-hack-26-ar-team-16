@@ -24,6 +24,17 @@ AI-powered personal trainer modules for existing gym apps. Chat with AI coach �
 - No force push to main
 - Claude API key ONLY in edge functions, NEVER in client code
 
+## Styling — CRITICAL RULE
+
+NativeWind v4 is configured and works on BOTH web and mobile. Use Tailwind `className` for all styling to keep both platforms in sync.
+
+- **ALWAYS use `className`** (Tailwind/NativeWind) for styling. It compiles to CSS on web and native styles on mobile.
+- Use inline `style` ONLY for truly dynamic values that can't be expressed in Tailwind (e.g., `style={{ backgroundColor: theme.primary }}` for runtime theme colors).
+- When mixing: put static layout/spacing/colors in `className`, dynamic values in `style`. Example: `className="flex-1 rounded-2xl p-4" style={{ backgroundColor: theme.primary }}`.
+- For conditional styles use Tailwind string interpolation: `className={`p-4 ${isActive ? 'bg-indigo-500' : 'bg-white'}`}`.
+- If you find existing code using only inline `style` for things Tailwind can handle, convert it to `className`.
+- NativeWind depends on correct babel config (`babel-preset-expo` with `jsxImportSource: 'nativewind'`). Do NOT change `babel.config.js` without verifying NativeWind still works.
+
 ## Architecture — Module Ownership
 
 - app/(tabs)/routine.tsx, src/components/routine/, src/modules/routine/ → @thblu

@@ -39,7 +39,8 @@ export function MessageList({ messages, isStreaming, activeTool = null }: Messag
       ref={listRef}
       data={messages}
       keyExtractor={(m) => m.id}
-      contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
+      style={{ backgroundColor: '#000000' }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
       renderItem={({ item, index }) => (
         <ChatBubble
           message={item}
@@ -53,7 +54,7 @@ export function MessageList({ messages, isStreaming, activeTool = null }: Messag
       )}
       ListEmptyComponent={
         <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
-          <Text style={{ fontSize: 16, color: '#94A3B8' }}>
+          <Text style={{ fontSize: 16, color: '#666666' }}>
             Empezá una conversación con Gohan
           </Text>
         </View>

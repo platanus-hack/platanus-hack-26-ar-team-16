@@ -38,6 +38,7 @@ export interface ChatRequestUserProfile {
   trainingDaysPerWeek: number;
   goals: string[];
   onboardingCompleted: boolean;
+  coachStyle?: string;
 }
 
 export interface ChatRequest {

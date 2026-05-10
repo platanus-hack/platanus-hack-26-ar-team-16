@@ -48,7 +48,6 @@ export default function LoginScreen() {
       if (authError) {
         setError(authError.message);
       }
-      // On success, onAuthStateChange in app/_layout.tsx redirects out of (auth).
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error con Google');
     } finally {
@@ -70,7 +69,7 @@ export default function LoginScreen() {
             {theme.logoUrl ? (
               <Image
                 source={{ uri: theme.logoUrl }}
-                style={{ width: 64, height: 64, borderRadius: 16 }}
+                className="w-16 h-16 rounded-2xl"
               />
             ) : (
               <View
@@ -111,6 +110,7 @@ export default function LoginScreen() {
               onPress={handleLogin}
               loading={loading}
               fullWidth
+              backgroundColor="#FF6B00"
             />
             <Button
               label="Continuar con Google"

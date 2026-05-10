@@ -5,10 +5,11 @@
 // next commit) so render code lives in exactly one place.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
-import { MessageList, MessageInput } from '@/components/chat';
+import { MessageList, MessageInput, CoachStylePicker } from '@/components/chat';
 import {
   CalendarModal,
   DaySelector,
@@ -17,6 +18,7 @@ import {
   ExerciseDetailScreen,
   RoutineHeader,
 } from '@/components/routine';
+import { useTheme } from '@/theme';
 import { useChatStore, useAuthStore, useRoutineStore } from '@/store';
 import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
 import { useSpeechRecognition, useRealtimeRoutine } from '@/hooks';
@@ -31,11 +33,15 @@ export function CoachChatView({ onError }: CommonProps) {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.streaming.isStreaming);
   const activeTool = useChatStore((s) => s.activeTool);
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
+  const theme = useTheme();
   const { isListening, transcript, startListening, stopListening } = useSpeechRecognition();
 
+  // Wait for auth hydration so seedWelcomeMessage() can branch on
+  // `userProfile.onboardingCompleted` and the active coach style.
   useEffect(() => {
-    seedWelcomeMessage();
-  }, []);
+    if (!isAuthLoading) seedWelcomeMessage();
+  }, [isAuthLoading]);
 
   const handleSend = (text: string) => {
     void sendUserMessage(text).catch((e) => onError?.(e instanceof Error ? e : new Error(String(e))));
@@ -51,12 +57,41 @@ export function CoachChatView({ onError }: CommonProps) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={['top', 'bottom']}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 16,
+          paddingVertical: 12,
+          borderBottomWidth: 1,
+          borderBottomColor: '#1A1A1A',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: theme.primary,
+            }}
+          >
+            <Ionicons name="fitness" size={16} color="#FFFFFF" />
+          </View>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF' }}>Gohan</Text>
+        </View>
+        <CoachStylePicker />
+      </View>
+
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={{ flex: 1 }}
+        className="flex-1"
       >
-        <View style={{ flex: 1 }}>
+        <View className="flex-1">
           <MessageList messages={messages} isStreaming={isStreaming} activeTool={activeTool} />
         </View>
         <MessageInput
@@ -181,7 +216,7 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
         {exercises.length === 0 ? (

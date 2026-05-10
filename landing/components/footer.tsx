@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto max-w-[1440px] px-6 md:px-10 grid md:grid-cols-12 gap-8">
         <div className="md:col-span-5">
           <div className="flex items-center gap-2.5 mb-6">
-            <Logo />
+            <Logo variant="light" />
             <span className="text-[13px] tracking-[0.22em] uppercase font-medium">
               Gohan AI
             </span>
@@ -26,10 +26,10 @@ export function Footer() {
           <FooterCol
             title="Product"
             items={[
-              ["Manifesto", "#manifesto"],
-              ["Try it", "#try"],
-              ["How it works", "#how"],
-              ["Developers", "#developers"],
+              ["Manifesto", "/#manifesto"],
+              ["Try it", "/#try"],
+              ["How it works", "/#how"],
+              ["MCP integration", "/mcp"],
             ]}
           />
           <FooterCol
