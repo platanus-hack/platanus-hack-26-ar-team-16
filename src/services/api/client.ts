@@ -53,12 +53,25 @@ export function createApiClient(config: CoachConfig): ApiClient {
         : typeof init.body === 'string'
         ? init.body
         : JSON.stringify(init.body);
-    return fetch(joinUrl(apiBaseUrl, path), {
+    const res = await fetch(joinUrl(apiBaseUrl, path), {
       method: init.method ?? (body ? 'POST' : 'GET'),
       headers,
       body,
       signal: init.signal,
     });
+    // On 401 emit a global event so token caches (e.g. <GohanCoach />'s
+    // session-token ref) can invalidate. Best-effort — environments without
+    // dispatchEvent (e.g. some Node test runners) silently skip.
+    if (res.status === 401) {
+      try {
+        (globalThis as unknown as EventTarget).dispatchEvent?.(
+          new Event('gohan:auth:invalidate'),
+        );
+      } catch {
+        // ignore — Event ctor unavailable in some RN versions
+      }
+    }
+    return res;
   }
 
   async function request<T = unknown>(path: string, init: ApiRequestInit = {}): Promise<T> {

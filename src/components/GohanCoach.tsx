@@ -5,31 +5,41 @@
 // Per ARCHITECTURE.md §14, this component is the public surface of the
 // future `@gohan-ai/react-native` package (Phase 3). It must NOT depend on
 // `expo-router`, `app/`, or Supabase Auth — those belong to the standalone
-// shell. Auth is injected via `getAuthToken`; the user identity is either
-// passed in directly (`userId`, the standalone path) or resolved via
-// `api-session` against `tenantSlug` (the embedded path, Phase 3 wiring).
+// shell. Auth is injected via `getAuthToken` OR resolved via `api-session`
+// when the host hands us a short-lived `gymJwt`. The two are mutually
+// exclusive — pick the path that matches your integration:
 //
-// Props mirror §14 of ARCHITECTURE.md:
-//   - apiBaseUrl     base URL of the Gohan edge functions
-//   - getAuthToken   async getter for the host's bearer token
-//   - userId         optional pre-resolved user id (standalone path)
-//   - tenantSlug     for the embedded path (defaults to "default")
-//   - onError        optional error sink; defaults to console.warn
-//   - initialView    pick whether the embedded view shows chat or routine
-//                    by default. Hosts that own their own nav can render
-//                    `<GohanCoachChat />` / `<GohanCoachRoutine />` directly
-//                    once those are factored out (Phase 3).
+//   - Standalone Expo / API-key:   pass `getAuthToken` (+ optional userId,
+//                                  externalId).
+//   - Embedded module (gym-issued JWT): pass `gymJwt` + `tenantSlug`. We
+//     POST it to `/api-session`, cache the returned `session_token`, and
+//     refresh transparently on 401. If the response carries `realtime_jwt`
+//     we forward it to the supabase realtime client via `setAuth`.
+//
+// Until the session resolves we render a minimal placeholder; failures are
+// surfaced via `onError`.
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CoachProvider } from '@/modules/coach';
 import { useAuthStore } from '@/store';
 import type { CoachConfig } from '@/types';
+import { supabase } from '@/services/supabase';
 import { CoachChatView, CoachRoutineView } from './GohanCoachViews';
 
 export interface GohanCoachProps {
   apiBaseUrl: string;
-  getAuthToken: () => Promise<string | null>;
+  /**
+   * Async getter for the host's bearer token (Supabase JWT, Gohan session
+   * JWT, or `gk_live_*` API key). Mutually exclusive with `gymJwt`.
+   */
+  getAuthToken?: () => Promise<string | null>;
+  /**
+   * Short-lived gym-issued JWT. When provided, `<GohanCoach />` resolves a
+   * Gohan session token via POST `/api-session` and uses it for downstream
+   * requests. Mutually exclusive with `getAuthToken`.
+   */
+  gymJwt?: string;
   /** Pre-resolved user id (standalone path). Embedded path resolves via api-session. */
   userId?: string;
   tenantSlug?: string;
@@ -53,9 +63,18 @@ export interface GohanCoachProps {
   chatEndpoint?: string;
 }
 
+interface ApiSessionResponse {
+  session_token: string;
+  realtime_jwt?: string | null;
+  expires_in?: number;
+  user_id?: string;
+  tenant_id?: string;
+}
+
 export function GohanCoach({
   apiBaseUrl,
   getAuthToken,
+  gymJwt,
   userId,
   tenantSlug = 'default',
   onError,
@@ -68,10 +87,13 @@ export function GohanCoach({
   const setUser = useAuthStore((s) => s.setUser);
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
-  const config = useMemo<CoachConfig>(
-    () => ({ apiBaseUrl, getAuthToken, anonKey, externalId }),
-    [apiBaseUrl, getAuthToken, anonKey, externalId],
-  );
+  // Cached session token from /api-session. We hold it in a ref so the
+  // memoized `resolveAuthToken` keeps the same identity across re-renders
+  // (rebuilding the ApiClient on every refresh would invalidate the
+  // CoachProvider's chat transport, dropping in-flight streams).
+  const sessionTokenRef = useRef<string | null>(null);
+  const sessionInflightRef = useRef<Promise<string | null> | null>(null);
+  const [sessionResolved, setSessionResolved] = useState<boolean>(!gymJwt);
 
   const reportError = useCallback(
     (err: unknown) => {
@@ -82,21 +104,151 @@ export function GohanCoach({
     [onError],
   );
 
-  // Standalone path: caller passes userId. Embedded path will resolve via
-  // api-session against the host JWT. Phase 2 covers only the former; the
-  // embedded resolver is a Phase 3 TODO (would call POST /api-session and
-  // hydrate `useAuthStore` with the returned profile).
+  const fetchApiSession = useCallback(async (): Promise<string | null> => {
+    if (!gymJwt) return null;
+    // Coalesce concurrent refresh attempts.
+    if (sessionInflightRef.current) return sessionInflightRef.current;
+    const url = `${apiBaseUrl.replace(/\/$/, '')}/api-session`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${gymJwt}`,
+      'X-Tenant-Slug': tenantSlug,
+    };
+    if (anonKey) headers.apikey = anonKey;
+
+    const promise = (async () => {
+      try {
+        const res = await fetch(url, { method: 'POST', headers });
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          throw new Error(`api-session failed (${res.status}): ${text}`);
+        }
+        const json = (await res.json()) as ApiSessionResponse;
+        sessionTokenRef.current = json.session_token;
+        if (json.user_id) {
+          // Hydrate just enough of the auth store for the chat
+          // user-profile builder to work. Embedded hosts that need richer
+          // profile data should fetch it separately.
+          const existing = useAuthStore.getState().user;
+          if (!existing || existing.id !== json.user_id) {
+            setUser({
+              id: json.user_id,
+              tenantId: json.tenant_id ?? 'default',
+              displayName: '',
+              avatarUrl: null,
+              fitnessLevel: 'beginner',
+              equipmentAvailable: [],
+              injuries: [],
+              trainingDaysPerWeek: 0,
+              goals: [],
+              onboardingCompleted: false,
+              createdAt: new Date(0).toISOString(),
+            });
+          }
+        }
+        if (json.realtime_jwt) {
+          try {
+            (supabase.realtime as { setAuth: (t: string) => void }).setAuth(json.realtime_jwt);
+          } catch (e) {
+            // Realtime auth wiring is best-effort — see useRealtimeRoutine.
+            console.warn('[GohanCoach] realtime setAuth rejected', e);
+          }
+        }
+        return json.session_token;
+      } finally {
+        sessionInflightRef.current = null;
+      }
+    })();
+    sessionInflightRef.current = promise;
+    return promise;
+  }, [apiBaseUrl, anonKey, gymJwt, setUser, tenantSlug]);
+
+  // Build the auth-token resolver passed to ApiClient. When `gymJwt` is the
+  // identity source we read from the cache, refresh on cache-miss, and
+  // re-fetch on 401 (handled by buildHeaders consumers — see below).
+  const resolveAuthToken = useCallback(async (): Promise<string | null> => {
+    if (gymJwt) {
+      if (sessionTokenRef.current) return sessionTokenRef.current;
+      try {
+        return await fetchApiSession();
+      } catch (e) {
+        reportError(e);
+        return null;
+      }
+    }
+    if (getAuthToken) return getAuthToken();
+    return null;
+  }, [gymJwt, getAuthToken, fetchApiSession, reportError]);
+
+  // Mount-time session resolution for the gymJwt path.
+  useEffect(() => {
+    if (!gymJwt) {
+      setSessionResolved(true);
+      return;
+    }
+    setSessionResolved(false);
+    let cancelled = false;
+    fetchApiSession()
+      .then(() => {
+        if (!cancelled) setSessionResolved(true);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          reportError(e);
+          setSessionResolved(true); // unblock UI; inner views will surface fetch errors
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [gymJwt, fetchApiSession, reportError]);
+
+  // 401 refresh hook: when any downstream fetch comes back 401 we want to
+  // drop the cached token so the next ApiClient call refetches it. We expose
+  // this via a global the ApiClient checks (kept inline to avoid leaking a
+  // refresh API into the public types). For now, callers can also clear the
+  // cache by remounting; this is a pragmatic Phase 4 minimum.
+  useEffect(() => {
+    if (!gymJwt) return undefined;
+    const handler = () => {
+      sessionTokenRef.current = null;
+    };
+    // Subscribe to a window-level event the ApiClient dispatches on 401. The
+    // ApiClient implementation lives in `src/services/api/client.ts`; if that
+    // event is not wired (older versions) this effect is a harmless no-op.
+    if (typeof globalThis !== 'undefined' && 'addEventListener' in (globalThis as object)) {
+      (globalThis as unknown as EventTarget).addEventListener?.(
+        'gohan:auth:invalidate',
+        handler as EventListener,
+      );
+      return () => {
+        (globalThis as unknown as EventTarget).removeEventListener?.(
+          'gohan:auth:invalidate',
+          handler as EventListener,
+        );
+      };
+    }
+    return undefined;
+  }, [gymJwt]);
+
+  const config = useMemo<CoachConfig>(
+    () => ({
+      apiBaseUrl,
+      getAuthToken: resolveAuthToken,
+      anonKey,
+      externalId,
+    }),
+    [apiBaseUrl, resolveAuthToken, anonKey, externalId],
+  );
+
+  // Standalone path: caller passes userId. Hydrate the auth store so the
+  // chat user-profile builder works. The gymJwt path hydrates from the
+  // api-session response above.
   useEffect(() => {
     if (!userId) return;
     if (currentUserId === userId) return;
-    // Hydrate just enough of the auth store for the chat user-profile
-    // builder to work. The full profile is loaded by the standalone shell
-    // (`app/_layout.tsx`); embedded hosts that don't have a Supabase
-    // session will need to bring their own profile sync (Phase 3).
     const existing = useAuthStore.getState().user;
     if (!existing || existing.id !== userId) {
-      // Minimal shape — fields will be filled in by the standalone shell or
-      // by a future api-session response.
       setUser({
         id: userId,
         tenantId: 'default',
@@ -112,6 +264,21 @@ export function GohanCoach({
       });
     }
   }, [userId, currentUserId, setUser]);
+
+  if (gymJwt && !sessionResolved) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#000',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <Text style={{ color: '#fff', opacity: 0.6 }}>Conectando...</Text>
+      </View>
+    );
+  }
 
   return (
     <CoachProvider config={config} chatEndpoint={chatEndpoint} tenantSlug={tenantSlug}>
