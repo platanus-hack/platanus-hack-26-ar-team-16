@@ -10,6 +10,7 @@ const STYLES: Record<
   error: { bg: '#DC2626', border: '#B91C1C', icon: 'alert-circle', iconColor: '#FFFFFF' },
   info: { bg: '#2563EB', border: '#1D4ED8', icon: 'information-circle', iconColor: '#FFFFFF' },
   warning: { bg: '#D97706', border: '#B45309', icon: 'warning', iconColor: '#FFFFFF' },
+  streak: { bg: '#FF6B00', border: '#C24E00', icon: 'flame', iconColor: '#FFFFFF' },
 };
 
 export function ToastHost() {

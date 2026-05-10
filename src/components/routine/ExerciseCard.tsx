@@ -45,6 +45,8 @@ interface ExerciseCardProps {
   onPress?: (exercise: Exercise) => void;
   onPressLog?: (exercise: Exercise) => void;
   logVersion?: number;
+  /** Hide the row's bottom hairline (used by the last item in a grouped list). */
+  isLast?: boolean;
 }
 
 export function ExerciseCard({
@@ -53,6 +55,7 @@ export function ExerciseCard({
   onPress,
   onPressLog,
   logVersion = 0,
+  isLast = false,
 }: ExerciseCardProps) {
   const pulse = useRef(new Animated.Value(0)).current;
   const [lastLog, setLastLog] = useState<ExerciseLog | null>(null);
@@ -69,9 +72,9 @@ export function ExerciseCard({
     ]).start();
   }, [highlighted, pulse]);
 
-  const borderColor = pulse.interpolate({
+  const backgroundColor = pulse.interpolate({
     inputRange: [0, 1],
-    outputRange: ['rgba(22,22,22,1)', 'rgba(255,107,0,0.9)'],
+    outputRange: ['rgba(255,107,0,0)', 'rgba(255,107,0,0.12)'],
   });
 
   const restLabel = formatRest(exercise.rest_seconds);
@@ -87,7 +90,9 @@ export function ExerciseCard({
   const tag = formatTag(exercise);
 
   return (
-    <Animated.View style={[styles.card, { borderColor }]}>
+    <Animated.View
+      style={[styles.card, { backgroundColor }, isLast && { borderBottomWidth: 0 }]}
+    >
       {/* Main tappable area: name + sub + tag */}
       <Pressable
         onPress={onPress ? () => onPress(exercise) : undefined}
@@ -130,13 +135,15 @@ export function ExerciseCard({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#141414',
-    borderRadius: 8,
-    borderWidth: 1,
-    marginBottom: 4,
-    paddingLeft: 12,
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    borderWidth: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#222',
+    marginBottom: 0,
+    paddingLeft: 4,
     paddingRight: 4,
-    paddingVertical: 8,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
   },

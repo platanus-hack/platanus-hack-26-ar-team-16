@@ -133,6 +133,48 @@ REGLAS DE JSONL:
 - Preferí Card como contenedor principal, ListItem para listar días/ejercicios, Label para datos clave
 - Para conversación pura sin datos, NO generes JSONL — solo texto`;
 
+// ─── Temporal context ────────────────────────────────────────────────────────
+//
+// Injected as a dynamic block into every system prompt so the coach knows what
+// day "hoy" / "mañana" / "ayer" resolve to. Without this the LLM defaulted to
+// asking "¿qué día?" even when the user said "del día" — broke the natural
+// way of talking to a trainer. Authored by @Juampiman in PR #37, kept here so
+// every behavioral string lives in this file.
+//
+// TODO: hardcoded to Argentina for v1. For multi-tenant expansion (BR/US),
+// pass timezone from the client and propagate via userProfile.
+
+export function getTemporalContext(timezone = 'America/Argentina/Buenos_Aires'): string {
+  const now = new Date();
+  const dateFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+  const dayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  const dow = dayMap[dowFmt.format(now)] ?? 0;
+
+  return `
+CONTEXTO TEMPORAL:
+- Hoy es ${dateFmt.format(now)}, ${timeFmt.format(now)}hs (${timezone})
+- day_of_week actual: ${dow} (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb)
+- "hoy" / "del día" / "esta sesión" → day_of_week=${dow}
+- "mañana" → day_of_week=${(dow + 1) % 7}
+- "ayer" → day_of_week=${(dow + 6) % 7}`;
+}
+
+
 // ─── Onboarding mode ─────────────────────────────────────────────────────────
 //
 // Active only when userProfile.onboardingCompleted === false.
@@ -192,39 +234,3 @@ Si el usuario no responde o dice "no quiero contestar", generá la rutina de tod
 2. Si confirma → llamar create_routine con TODOS los días de una sola vez.
 3. Cerrar con: "Listo, te armé tu primera rutina 💪 [resumen breve]. Es un punto de partida, no un veredicto. Probala y me decís qué afinamos. La encontrás en la pestaña Rutinas."`;
 
-// ─── Temporal context ────────────────────────────────────────────────────────
-//
-// Injected into every prompt so the coach knows what day/time it is and can
-// resolve "hoy", "mañana", "ayer" to the correct day_of_week without asking.
-// Hardcoded to Argentina for v1. For multi-tenant expansion (BR/US), pass
-// timezone from the client and propagate via userProfile.
-
-export function getTemporalContext(timezone = 'America/Argentina/Buenos_Aires'): string {
-  const now = new Date();
-  const dateFmt = new Intl.DateTimeFormat('es-AR', {
-    timeZone: timezone,
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const timeFmt = new Intl.DateTimeFormat('es-AR', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
-  const dayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
-  };
-  const dow = dayMap[dowFmt.format(now)] ?? 0;
-
-  return `
-CONTEXTO TEMPORAL:
-- Hoy es ${dateFmt.format(now)}, ${timeFmt.format(now)}hs (${timezone})
-- day_of_week actual: ${dow} (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb)
-- "hoy" / "del día" / "esta sesión" → day_of_week=${dow}
-- "mañana" → day_of_week=${(dow + 1) % 7}
-- "ayer" → day_of_week=${(dow + 6) % 7}`;
-}

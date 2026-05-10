@@ -152,10 +152,22 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
     totalLogs: 0,
   });
 
+  const streakAnnouncedRef = React.useRef(false);
   useEffect(() => {
     let cancelled = false;
     getWeekStreak().then((s) => {
-      if (!cancelled) setStreak({ daysTrained: s.daysTrained, totalLogs: s.totalLogs });
+      if (cancelled) return;
+      setStreak({ daysTrained: s.daysTrained, totalLogs: s.totalLogs });
+      if (!streakAnnouncedRef.current) {
+        streakAnnouncedRef.current = true;
+        const msg =
+          s.daysTrained === 0
+            ? '¡Empezá tu racha esta semana!'
+            : s.daysTrained === 1
+              ? '1 día entrenado esta semana — ¡seguí!'
+              : `${s.daysTrained} días entrenados esta semana 🔥`;
+        toast.streak(msg);
+      }
     });
     return () => {
       cancelled = true;
@@ -256,7 +268,7 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 14 }}
         showsVerticalScrollIndicator={false}
       >
         <Pressable
@@ -301,16 +313,27 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
             />
           </View>
         ) : (
-          exercises.map((ex: Exercise) => (
-            <ExerciseCard
-              key={ex.id}
-              exercise={ex}
-              highlighted={recentlyChanged.has(ex.id)}
-              onPress={(e) => setSelectedExercise(e)}
-              onPressLog={(e) => setLogExercise(e)}
-              logVersion={logVersion}
-            />
-          ))
+          <View
+            style={{
+              backgroundColor: '#0F0F0F',
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: '#1A1A1A',
+              paddingHorizontal: 12,
+              overflow: 'hidden',
+            }}
+          >
+            {exercises.map((ex: Exercise) => (
+              <ExerciseCard
+                key={ex.id}
+                exercise={ex}
+                highlighted={recentlyChanged.has(ex.id)}
+                onPress={(e) => setSelectedExercise(e)}
+                onPressLog={(e) => setLogExercise(e)}
+                logVersion={logVersion}
+              />
+            ))}
+          </View>
         )}
       </ScrollView>
 
