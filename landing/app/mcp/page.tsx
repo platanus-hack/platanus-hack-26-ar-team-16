@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
 import { Reveal } from "@/components/reveal";
-import { Eyebrow, Arrow } from "@/components/primitives";
+import { Eyebrow } from "@/components/primitives";
 
 export const metadata: Metadata = {
   title: "Gohan AI — MCP integration",
   description:
-    "Plug Gohan AI into your gym app via the Model Context Protocol. Nine tools, one Node process, your data stays in your Supabase.",
+    "Plug Gohan AI into your gym app via the Model Context Protocol. Nine tools over HTTP, tenant-scoped API keys, your data stays in your Supabase.",
 };
 
 const TOOLS: { name: string; tagline: string; params: [string, string][] }[] = [
@@ -108,27 +108,26 @@ function Hero() {
           <p className="mt-10 text-xl md:text-2xl leading-[1.4] text-[var(--color-graphite)] max-w-3xl">
             Nine tools. One Node process speaking the{" "}
             <span className="font-mono text-[0.92em]">Model Context Protocol</span>{" "}
-            over stdio. Your members keep using your app. Your data stays in your
-            Supabase. Our intelligence drops in via the agent host you already run.
+            over HTTP, with per-tenant API keys at the front door. Your members
+            keep using your app. Your data stays in your Supabase. Our
+            intelligence drops in via any MCP-aware agent you already run.
           </p>
         </Reveal>
         <Reveal delay={400} className="mt-12">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-2.5 items-center sm:items-start">
             <a
               href="#install"
-              className="btn-shine inline-flex items-center justify-between gap-6 px-6 py-4 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-flame)] transition-colors group"
+              className="btn-shine inline-flex items-center justify-center w-full sm:w-auto px-5 py-3 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] text-[14px] font-medium tracking-tight hover:bg-[var(--color-flame)] transition-colors"
             >
-              <span className="font-medium text-[15px]">Quick install</span>
-              <Arrow className="ml-2" />
+              Quick install
             </a>
             <a
               href="https://github.com/platanus-hack/platanus-hack-26-ar-team-16/blob/main/mcp-server/README.md"
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-between gap-6 px-6 py-4 rounded-full border border-[var(--color-ink)]/15 hover:border-[var(--color-ink)] transition-colors group"
+              className="btn-shine inline-flex items-center justify-center w-full sm:w-auto px-5 py-3 rounded-full bg-[color-mix(in_srgb,var(--color-ink)_6%,transparent)] backdrop-blur-md text-[var(--color-ink)] text-[14px] font-medium tracking-tight border border-[var(--color-ink)]/10 hover:bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] hover:border-[var(--color-ink)]/20 transition-colors"
             >
-              <span className="font-medium text-[15px]">Full reference on GitHub</span>
-              <Arrow className="ml-2" />
+              Full reference on GitHub
             </a>
           </div>
         </Reveal>
@@ -144,12 +143,12 @@ function WhatYouGet() {
       b: "Routine reads, exercise CRUD, profile reads, multi-tenant branding, tenant user listings. All exposed as MCP tools through a single Node process.",
     },
     {
-      h: "Stdio, no HTTP",
-      b: "Your host spawns the server as a subprocess and exchanges JSON-RPC over stdin/stdout. No new endpoint to monitor, no new auth surface to defend.",
+      h: "HTTP + bearer auth",
+      b: "Streamable HTTP transport on /mcp. Each request carries an Authorization: Bearer key that we hash against tenant_api_keys and resolve to a tenant_id. stdio mode is still there as a --stdio flag for local dev.",
     },
     {
-      h: "Direct Supabase access",
-      b: "The server talks to the Gohan AI Postgres via a service-role key. No relay, no rate-limited middleman. Sub-millisecond writes; routine updates land in realtime.",
+      h: "Tenant-scoped by default",
+      b: "Every Postgres query is auto-scoped to the tenant resolved from the API key. A key for gym A cannot read or mutate gym B's users, routines, or branding — even if it asks for them by ID.",
     },
   ];
   return (
@@ -198,36 +197,47 @@ function Architecture() {
           </Reveal>
           <Reveal delay={200}>
             <p className="mt-6 text-[var(--color-paper)]/65 text-[15px] leading-relaxed">
-              Three actors, two boundaries. Your host trusts the server because
-              it spawned it; the server trusts your host for the same reason.
-              Supabase is the source of truth.
+              Three actors, two boundaries. The MCP host authenticates with a
+              bearer key the server resolves to a tenant. The server uses a
+              service-role key to talk to Supabase. Tenant isolation is
+              automatic, not a host responsibility.
             </p>
           </Reveal>
         </div>
         <Reveal delay={260} className="md:col-span-8">
           <div className="bg-[var(--color-graphite)] border border-[var(--color-paper)]/10 rounded-2xl p-6 md:p-8 overflow-x-auto">
             <pre className="font-mono text-[12px] md:text-[13px] leading-relaxed text-[var(--color-paper)]/85 whitespace-pre">
-{`┌──────────────────────┐  stdio  ┌───────────────────┐  HTTPS  ┌──────────────┐
+{`┌──────────────────────┐  HTTPS  ┌───────────────────┐  HTTPS  ┌──────────────┐
 │  MCP host            │ ──────▶ │ gohan-ai server   │ ──────▶ │  Supabase    │
-│  Claude Desktop,     │ ◀────── │ (Node process)    │ ◀────── │  (Postgres)  │
-│  your gym backend,   │   tools │ SERVICE_ROLE auth │         │              │
-│  custom agent…       │         │                   │         │              │
+│  Claude Desktop,     │ ◀────── │ POST /mcp         │ ◀────── │  (Postgres)  │
+│  your gym backend,   │  bearer │ verify API key →  │ tenant- │              │
+│  custom agent…       │ gk_live_│ resolve tenant_id │ scoped  │              │
 └──────────────────────┘         └───────────────────┘         └──────────────┘`}
             </pre>
             <ul className="mt-6 space-y-2 text-sm text-[var(--color-paper)]/65">
               <li>
                 <span className="text-[var(--color-flame)] font-mono mr-2">·</span>
-                Transport: stdio. No HTTP listener. The host owns the lifecycle.
+                Transport: Streamable HTTP. <span className="font-mono text-[0.9em]">POST /mcp</span> on port{" "}
+                <span className="font-mono text-[0.9em]">3000</span> by default. Stateless — each request authenticates on its own.
               </li>
               <li>
                 <span className="text-[var(--color-flame)] font-mono mr-2">·</span>
-                Host ↔ server: trusted by process boundary.
+                Host ↔ server:{" "}
+                <span className="font-mono text-[0.9em]">Authorization: Bearer gk_live_…</span>{" "}
+                hashed (SHA-256) against{" "}
+                <span className="font-mono text-[0.9em]">tenant_api_keys</span>.
               </li>
               <li>
                 <span className="text-[var(--color-flame)] font-mono mr-2">·</span>
                 Server ↔ Supabase:{" "}
                 <span className="font-mono text-[0.9em]">SUPABASE_SERVICE_ROLE_KEY</span>.
-                Bypasses RLS — keep it server-side.
+                Bypasses RLS — every query is filtered by the resolved tenant_id.
+              </li>
+              <li>
+                <span className="text-[var(--color-flame)] font-mono mr-2">·</span>
+                Local dev only:{" "}
+                <span className="font-mono text-[0.9em]">--stdio</span> flag swaps the transport for stdin/stdout and
+                skips API-key auth (no tenant scoping).
               </li>
             </ul>
           </div>
@@ -247,7 +257,7 @@ function Install() {
           </Reveal>
           <Reveal delay={100}>
             <h2 className="display text-4xl md:text-5xl mt-6 leading-tight">
-              Three commands.
+              Build, run, connect.
               <br />
               <span className="display-italic text-[var(--color-flame)]">
                 Then it&rsquo;s yours.
@@ -256,17 +266,18 @@ function Install() {
           </Reveal>
           <Reveal delay={200}>
             <p className="mt-6 text-[var(--color-mute)] leading-relaxed">
-              Node ≥ 18 and a Supabase project provisioned with the Gohan AI
-              schema. Service-role key in env. The server starts even with
-              missing creds — the failure surfaces on the first tool call so
-              your host can decide what to do.
+              Node ≥ 18, a Supabase project with the Gohan AI schema, and a
+              tenant API key issued from{" "}
+              <span className="font-mono text-[0.92em]">tenant_api_keys</span>.
+              The server starts even with missing env — auth fails on the first
+              request so your host can decide what to do.
             </p>
           </Reveal>
         </div>
         <div className="md:col-span-8 space-y-6">
           <Reveal delay={260}>
             <CodeBlock
-              title="Build"
+              title="Build & run"
               lines={[
                 ["c", "# clone this repo, then"],
                 ["k", "cd "],
@@ -275,31 +286,21 @@ function Install() {
                 ["k", "npm install"],
                 ["k", "npm run build"],
                 ["c", "# emits dist/index.js"],
+                [],
+                ["k", "SUPABASE_URL"],
+                ["b", "=https://your-project.supabase.co \\"],
+                ["k", "  SUPABASE_SERVICE_ROLE_KEY"],
+                ["b", "=your-service-role \\"],
+                ["k", "  PORT"],
+                ["b", "=3000 \\"],
+                ["b", "  node dist/index.js"],
+                ["c", "# HTTP transport listening on /mcp"],
               ]}
             />
           </Reveal>
           <Reveal delay={360}>
             <CodeBlock
-              title="claude_desktop_config.json"
-              lines={[
-                ["b", "{"],
-                ["b", "  \"mcpServers\": {"],
-                ["b", "    \"gohan-ai\": {"],
-                ["b", "      \"command\": \"node\","],
-                ["b", "      \"args\": [\"/path/to/mcp-server/dist/index.js\"],"],
-                ["b", "      \"env\": {"],
-                ["b", "        \"SUPABASE_URL\": \"https://your-project.supabase.co\","],
-                ["b", "        \"SUPABASE_SERVICE_ROLE_KEY\": \"your-service-role-key\""],
-                ["b", "      }"],
-                ["b", "    }"],
-                ["b", "  }"],
-                ["b", "}"],
-              ]}
-            />
-          </Reveal>
-          <Reveal delay={460}>
-            <CodeBlock
-              title="Or wire it from your own MCP host (Node)"
+              title="Connect from your MCP host (Node + Streamable HTTP)"
               lines={[
                 ["k", "import "],
                 ["b", "{ Client } "],
@@ -307,17 +308,25 @@ function Install() {
                 ["s", "'@modelcontextprotocol/sdk/client/index.js'"],
                 ["b", ";"],
                 ["k", "import "],
-                ["b", "{ StdioClientTransport } "],
+                ["b", "{ StreamableHTTPClientTransport } "],
                 ["k", "from "],
-                ["s", "'@modelcontextprotocol/sdk/client/stdio.js'"],
+                ["s", "'@modelcontextprotocol/sdk/client/streamableHttp.js'"],
                 ["b", ";"],
                 [],
                 ["k", "const "],
                 ["b", "transport = "],
                 ["k", "new "],
-                ["b", "StdioClientTransport({ command: "],
-                ["s", "'node'"],
-                ["b", ", args: […], env: {…} });"],
+                ["b", "StreamableHTTPClientTransport("],
+                ["k", "new "],
+                ["b", "URL("],
+                ["s", "'https://mcp.your-gym.com/mcp'"],
+                ["b", "), {"],
+                ["b", "    requestInit: { headers: {"],
+                ["s", " 'Authorization'"],
+                ["b", ": "],
+                ["s", "`Bearer ${process.env.GOHAN_API_KEY}`"],
+                ["b", " } },"],
+                ["b", "  });"],
                 [],
                 ["k", "const "],
                 ["b", "client = "],
@@ -336,6 +345,28 @@ function Install() {
                 ["b", "client.callTool({ name: "],
                 ["s", "'get_user_routine'"],
                 ["b", ", arguments: { user_id } });"],
+              ]}
+            />
+          </Reveal>
+          <Reveal delay={460}>
+            <CodeBlock
+              title="Local dev / Claude Desktop (stdio mode, no auth)"
+              lines={[
+                ["c", "# stdio bypasses API-key auth — local dev only"],
+                ["b", "{"],
+                ["b", "  \"mcpServers\": {"],
+                ["b", "    \"gohan-ai\": {"],
+                ["b", "      \"command\": \"node\","],
+                ["b", "      \"args\": [\"/path/to/mcp-server/dist/index.js\","],
+                ["s", "                \"--stdio\""],
+                ["b", "],"],
+                ["b", "      \"env\": {"],
+                ["b", "        \"SUPABASE_URL\": \"https://your-project.supabase.co\","],
+                ["b", "        \"SUPABASE_SERVICE_ROLE_KEY\": \"your-service-role\""],
+                ["b", "      }"],
+                ["b", "    }"],
+                ["b", "  }"],
+                ["b", "}"],
               ]}
             />
           </Reveal>
@@ -430,7 +461,11 @@ function Tools() {
               human-readable status string. Errors are returned in the same
               shape with the text prefixed by{" "}
               <span className="font-mono text-[0.92em]">Error:</span>. Tools
-              never throw to the host.
+              never throw to the host. Any tool that takes{" "}
+              <span className="font-mono text-[0.92em]">user_id</span> also
+              accepts an{" "}
+              <span className="font-mono text-[0.92em]">X-External-Id</span>{" "}
+              request header — handy if you keep your own user IDs.
             </p>
           </Reveal>
         </div>
@@ -474,16 +509,16 @@ function Tools() {
 function Patterns() {
   const cards = [
     {
-      h: "Claude Desktop",
-      b: "Drop the JSON config into claude_desktop_config.json. Restart. Tools appear under the gohan-ai server. Useful for prototyping a B2B integration in minutes.",
+      h: "Gym backend agent",
+      b: "Your backend runs an LLM agent that orchestrates your business logic plus Gohan tools over HTTP with a single tenant API key. End users only ever talk to your backend — the API key never leaves your infrastructure. Production default.",
     },
     {
       h: "Your own MCP host",
-      b: "Spawn the server from a Node process via @modelcontextprotocol/sdk. Wrap each tool call in your own auth + tenant gate. Production path.",
+      b: "Connect via @modelcontextprotocol/sdk Streamable HTTP transport. One tenant key per host. Tenant scoping is automatic — your code never has to filter by tenant_id.",
     },
     {
-      h: "Gym backend agent",
-      b: "Your backend runs an LLM agent that orchestrates your business logic plus Gohan tools. End users only ever talk to your backend over HTTPS — the service-role key never leaves your infrastructure.",
+      h: "Claude Desktop (dev)",
+      b: "Drop the JSON config with --stdio into claude_desktop_config.json and restart. The 9 tools appear under gohan-ai. stdio bypasses API-key auth — useful for prototyping, not for production.",
     },
   ];
   return (
@@ -534,10 +569,10 @@ function Security() {
           </Reveal>
           <Reveal delay={100}>
             <h2 className="display text-4xl md:text-5xl mt-6 leading-tight">
-              Trusted host only.
+              One key per tenant.
               <br />
               <span className="display-italic text-[var(--color-flame)]">
-                Never on the device.
+                Server-side only.
               </span>
             </h2>
           </Reveal>
@@ -549,9 +584,11 @@ function Security() {
                 01
               </span>
               <span>
-                <span className="font-mono text-[0.92em]">SUPABASE_SERVICE_ROLE_KEY</span>{" "}
-                bypasses RLS. Any caller of these tools effectively has full
-                read/write on the underlying tables.
+                Each tenant gets its own{" "}
+                <span className="font-mono text-[0.92em]">gk_live_*</span> API
+                key. Compromise of one key exposes one tenant — never the whole
+                cluster. Rotate by inserting a new row and revoking the old via{" "}
+                <span className="font-mono text-[0.92em]">revoked_at</span>.
               </span>
             </li>
             <li className="flex gap-4">
@@ -559,10 +596,10 @@ function Security() {
                 02
               </span>
               <span>
-                The server does not authenticate the MCP host and does not
-                scope tool calls to a tenant. Authorization is your
-                responsibility — gate calls in your host before they reach the
-                server.
+                <span className="font-mono text-[0.92em]">SUPABASE_SERVICE_ROLE_KEY</span>{" "}
+                lives only inside the MCP server process. Tools bypass RLS, but
+                queries are auto-filtered by the tenant_id resolved from the
+                bearer key — your host code never has to remember to filter.
               </span>
             </li>
             <li className="flex gap-4">
@@ -571,8 +608,9 @@ function Security() {
               </span>
               <span>
                 Run inside a trusted environment (your backend, not end-user
-                devices). For internet-exposed deployments put the server
-                behind your own API and authn layer.
+                devices). The bearer key is not for browsers — it gives full
+                tenant-wide access. End users authenticate to your app; your
+                app authenticates to Gohan.
               </span>
             </li>
             <li className="flex gap-4">
@@ -580,28 +618,28 @@ function Security() {
                 04
               </span>
               <span>
-                Validate <span className="font-mono text-[0.92em]">user_id</span>{" "}
-                server-side against your own auth before passing it to tools.
-                The server takes user IDs at face value.
+                <span className="font-mono text-[0.92em]">user_id</span> and{" "}
+                <span className="font-mono text-[0.92em]">X-External-Id</span>{" "}
+                must resolve to a profile inside the same tenant as the API
+                key. Cross-tenant access errors out instead of returning a
+                stranger&rsquo;s data.
               </span>
             </li>
           </ul>
-          <div className="mt-12 flex flex-col sm:flex-row gap-3">
+          <div className="mt-12 flex flex-col sm:flex-row gap-2.5 items-center sm:items-start">
             <a
               href="https://github.com/platanus-hack/platanus-hack-26-ar-team-16/blob/main/mcp-server/README.md"
               target="_blank"
               rel="noreferrer"
-              className="btn-shine inline-flex items-center justify-between gap-6 px-6 py-4 rounded-full bg-[var(--color-paper)] text-[var(--color-ink)] hover:bg-[var(--color-flame)] hover:text-[var(--color-paper)] transition-colors group"
+              className="btn-shine inline-flex items-center justify-center w-full sm:w-auto px-5 py-3 rounded-full bg-[var(--color-paper)] text-[var(--color-ink)] text-[14px] font-medium tracking-tight hover:bg-[var(--color-flame)] hover:text-[var(--color-paper)] transition-colors"
             >
-              <span className="font-medium text-[15px]">Read the full reference</span>
-              <Arrow className="ml-2" />
+              Read the full reference
             </a>
             <a
               href="/#contact"
-              className="inline-flex items-center justify-between gap-6 px-6 py-4 rounded-full border border-[var(--color-paper)]/25 hover:border-[var(--color-paper)] transition-colors group"
+              className="btn-shine inline-flex items-center justify-center w-full sm:w-auto px-5 py-3 rounded-full bg-[color-mix(in_srgb,var(--color-paper)_8%,transparent)] backdrop-blur-md text-[var(--color-paper)] text-[14px] font-medium tracking-tight border border-[var(--color-paper)]/15 hover:bg-[color-mix(in_srgb,var(--color-paper)_14%,transparent)] hover:border-[var(--color-paper)]/30 transition-colors"
             >
-              <span className="font-medium text-[15px]">Talk integration</span>
-              <Arrow className="ml-2" />
+              Talk integration
             </a>
           </div>
         </Reveal>
