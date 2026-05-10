@@ -1,180 +1,81 @@
-/**
- * Inicio (home) — hardcoded Megatlon demo screen.
- *
- * Replicates the look of the real Megatlon Inicio tab so the visitor
- * navigating around feels they're inside the actual app. No real data.
- *
- * Before the live demo: swap Unsplash URLs for local assets to eliminate
- * latency and any Unsplash downtime risk.
- */
-
 import React from 'react';
-import { Image, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-const MT_BRAND = '#FF6B00';
-
-const NOVEDADES = [
-  {
-    id: 'norte',
-    sede: 'Sede Barrio Norte',
-    title: 'INFORMACIÓN IMPORTANTE',
-    image: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80',
-  },
-  {
-    id: 'jardin',
-    sede: 'Sede Barrio Jardín',
-    title: 'INFORMACIÓN IMPORTANTE',
-    image: 'https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=600&q=80',
-  },
-  {
-    id: 'devoto',
-    sede: 'Sede Devoto',
-    title: 'INFORMACIÓN IMPORTANTE',
-    image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=600&q=80',
-  },
-];
-
-const RECOMENDADOS = [
-  {
-    id: 'pers-1',
-    title: 'ENTRENAMIENTO PERSONALIZADO',
-    subtitle: 'Reservá un PT',
-    image: 'https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&q=80',
-  },
-  {
-    id: 'pers-2',
-    title: 'NUTRICIÓN',
-    subtitle: 'Plan a medida',
-    image: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=600&q=80',
-  },
-];
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useTheme } from '@/theme';
+import { useAuthStore } from '@/store';
 
 export default function InicioScreen() {
+  const theme = useTheme();
+  const displayName = useAuthStore((s) => s.user?.displayName ?? 'Atleta');
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-        }}
-      >
-        <View style={{ width: 24 }} />
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '500', letterSpacing: 2 }}>
-          MEGATLON
+    <SafeAreaView className="flex-1 bg-slate-50" edges={['top']}>
+      <View className="px-5 pt-4 pb-2">
+        <Text className="text-sm text-slate-500">Hola,</Text>
+        <Text className="text-2xl font-bold text-slate-900 mt-0.5">
+          {displayName}
         </Text>
-        <MaterialCommunityIcons name="bell-outline" size={22} color="#FFFFFF" />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View
-          style={{
-            height: 200,
-            marginHorizontal: 16,
-            marginTop: 4,
-            borderRadius: 14,
-            overflow: 'hidden',
-            backgroundColor: '#1F1F1F',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, gap: 16 }}>
+        <Pressable
+          onPress={() => router.push('/(tabs)/coach')}
+          className="rounded-2xl p-6"
+          style={({ pressed }) => ({
+            backgroundColor: theme.primary,
+            opacity: pressed ? 0.9 : 1,
+          })}
         >
-          <Image
-            source={{ uri: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=900&q=80' }}
-            style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.55 }}
-            resizeMode="cover"
-          />
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontSize: 28,
-              fontWeight: '600',
-              letterSpacing: 0.5,
-              textAlign: 'center',
-              lineHeight: 32,
-            }}
-          >
-            CANALES DE{'\n'}ATENCIÓN
+          <View className="flex-row items-center gap-3 mb-3">
+            <View className="w-11 h-11 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}>
+              <Ionicons name="chatbubble-ellipses" size={22} color="#FFFFFF" />
+            </View>
+            <Text className="text-xl font-bold text-white">Gohan AI Coach</Text>
+          </View>
+          <Text className="text-sm leading-5" style={{ color: 'rgba(255,255,255,0.85)' }}>
+            Pedile a tu coach de IA que te arme una rutina personalizada, modifique ejercicios o te guíe en tu entrenamiento.
           </Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() => router.push('/(tabs)/routine')}
+          className="bg-white rounded-2xl p-6 border border-slate-200"
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
+        >
+          <View className="flex-row items-center gap-3 mb-3">
+            <View className="w-11 h-11 rounded-full bg-indigo-50 items-center justify-center">
+              <Ionicons name="barbell" size={22} color={theme.primary} />
+            </View>
+            <Text className="text-xl font-bold text-slate-900">Mi Rutina</Text>
+          </View>
+          <Text className="text-sm text-slate-500 leading-5">
+            Mirá tu rutina semanal, los ejercicios de cada día con series, repeticiones y descanso.
+          </Text>
+        </Pressable>
+
+        <View className="bg-white rounded-2xl p-6 border border-slate-200">
+          <Text className="text-base font-bold text-slate-900 mb-3">
+            Cómo funciona
+          </Text>
+          <View style={{ gap: 16 }}>
+            {[
+              { icon: 'chatbubble-outline' as const, text: 'Contale a Gohan tus objetivos, equipamiento y días disponibles' },
+              { icon: 'flash-outline' as const, text: 'La IA te genera una rutina personalizada al instante' },
+              { icon: 'sync-outline' as const, text: 'Pedí cambios por chat y se actualizan en tiempo real' },
+            ].map((step, i) => (
+              <View key={i} className="flex-row items-start gap-3">
+                <View className="w-8 h-8 rounded-full bg-slate-100 items-center justify-center">
+                  <Ionicons name={step.icon} size={16} color={theme.primary} />
+                </View>
+                <Text className="flex-1 text-sm text-slate-600 leading-5">{step.text}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
-        <Text
-          style={{
-            color: '#B8B8B8',
-            fontSize: 12,
-            fontWeight: '500',
-            letterSpacing: 1.5,
-            paddingHorizontal: 16,
-            marginTop: 24,
-            marginBottom: 10,
-          }}
-        >
-          NOVEDADES
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
-        >
-          {NOVEDADES.map((n) => (
-            <View
-              key={n.id}
-              style={{ width: 240, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
-            >
-              <Image source={{ uri: n.image }} style={{ width: '100%', height: 130 }} resizeMode="cover" />
-              <View style={{ padding: 12 }}>
-                <Text
-                  style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
-                >
-                  {n.title}
-                </Text>
-                <Text style={{ color: '#888888', fontSize: 12 }}>{n.sede}</Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-
-        <Text
-          style={{
-            color: '#B8B8B8',
-            fontSize: 12,
-            fontWeight: '500',
-            letterSpacing: 1.5,
-            paddingHorizontal: 16,
-            marginTop: 24,
-            marginBottom: 10,
-          }}
-        >
-          RECOMENDADOS
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
-        >
-          {RECOMENDADOS.map((r) => (
-            <View
-              key={r.id}
-              style={{ width: 200, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
-            >
-              <Image source={{ uri: r.image }} style={{ width: '100%', height: 110 }} resizeMode="cover" />
-              <View style={{ padding: 12 }}>
-                <Text
-                  style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
-                >
-                  {r.title}
-                </Text>
-                <Text style={{ color: '#888888', fontSize: 11 }}>{r.subtitle}</Text>
-              </View>
-            </View>
-          ))}
-        </ScrollView>
-
-        <View style={{ height: 96 }} />
+        <View className="h-8" />
       </ScrollView>
     </SafeAreaView>
   );

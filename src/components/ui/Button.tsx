@@ -41,12 +41,12 @@ export function Button({
   const theme = useTheme();
   const isDisabled = disabled || loading;
 
-  const bgStyle =
+  const bgColor =
     variant === 'primary'
-      ? { backgroundColor: theme.primary }
+      ? theme.primary
       : variant === 'secondary'
-        ? { backgroundColor: '#EEF2FF' }
-        : undefined;
+        ? '#EEF2FF'
+        : 'transparent';
 
   const textColor =
     variant === 'primary' ? '#FFFFFF' : theme.primary;
@@ -55,18 +55,18 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        bgStyle,
-        { opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1 },
-      ]}
       className={`${sizePadding[size]} rounded-2xl flex-row items-center justify-center ${fullWidth ? 'w-full' : ''}`}
+      style={({ pressed }) => ({
+        backgroundColor: bgColor,
+        opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
+      })}
     >
       {loading ? (
         <ActivityIndicator color={textColor} />
       ) : (
-        <View className="flex-row items-center" style={{ gap: 8 }}>
+        <View className="flex-row items-center gap-2">
           {icon}
-          <Text style={{ color: textColor }} className={`font-semibold ${sizeText[size]}`}>
+          <Text className={`font-semibold ${sizeText[size]}`} style={{ color: textColor }}>
             {label}
           </Text>
         </View>

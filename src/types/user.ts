@@ -1,4 +1,5 @@
 export type FitnessLevel = 'beginner' | 'intermediate' | 'advanced';
+export type CoachStyle = 'amable' | 'intenso' | 'picante';
 
 export interface UserProfile {
   id: string;

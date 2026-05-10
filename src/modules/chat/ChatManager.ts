@@ -1,4 +1,4 @@
-import { useAuthStore, useChatStore } from '@/store';
+import { useAuthStore, useChatStore, useCoachStyleStore } from '@/store';
 import type { ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/modules/ai';
 import type { ChatRequest } from '@/modules/ai';
@@ -31,6 +31,7 @@ function buildUserProfileForRequest(): ChatRequest['userProfile'] {
     trainingDaysPerWeek: u.trainingDaysPerWeek,
     goals: u.goals,
     onboardingCompleted: u.onboardingCompleted,
+    coachStyle: useCoachStyleStore.getState().style,
   };
 }
 
@@ -130,12 +131,19 @@ export function pushAudioBubble(audioUrl: string): void {
 export function seedWelcomeMessage(): void {
   const store = useChatStore.getState();
   if (store.messages.length > 0) return;
+  const style = useCoachStyleStore.getState().style;
+
+  const welcomeByStyle: Record<string, string> = {
+    amable: 'Hola, soy Gohan, tu coach personal. Contame tranquilo: ¿qué objetivo tenés, cuántos días podés entrenar y con qué equipamiento contás? Vamos a tu ritmo.',
+    intenso: 'Soy Gohan. Contame tu objetivo, días disponibles y equipamiento. Con eso te armo la rutina.',
+    picante: 'Buenas, soy Gohan. A ver, ¿qué querés lograr, cuántos días le metés y qué tenés para entrenar? Dale que no tengo todo el día.',
+  };
+
   store.addMessage({
     id: 'welcome-1',
     conversationId: MOCK_CONVERSATION_ID,
     role: 'assistant',
-    content:
-      'Hola, soy Gohan. Para armarte una rutina personalizada contame: ¿cuál es tu objetivo, cuántos días entrenás por semana y qué equipamiento tenés?',
+    content: welcomeByStyle[style] ?? welcomeByStyle.intenso,
     audioUrl: null,
     createdAt: new Date().toISOString(),
   });

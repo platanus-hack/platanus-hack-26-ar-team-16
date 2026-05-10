@@ -41,6 +41,7 @@ export interface ChatRequest {
     trainingDaysPerWeek: number;
     goals: string[];
     onboardingCompleted: boolean;
+    coachStyle?: string;
   } | null;
 }
 

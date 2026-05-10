@@ -220,6 +220,8 @@ function DefaultTabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen name="qr" options={{ href: null }} />
+      <Tabs.Screen name="mas" options={{ href: null }} />
     </Tabs>
   );
 }
