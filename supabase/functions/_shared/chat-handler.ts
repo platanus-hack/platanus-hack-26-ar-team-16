@@ -220,6 +220,24 @@ export const TOOLS: Anthropic.Tool[] = [
       required: ['routine_id'],
     },
   },
+  {
+    name: 'update_routine_day',
+    description:
+      'Update a specific day\'s label and/or muscle groups in the active routine. Use this whenever the user changes what a day focuses on (e.g. "change Monday to legs", "rename Wednesday to Pull"). Always pair with add/replace/remove_exercise calls to update the actual exercises too.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        routine_day_id: { type: 'string', description: 'ID of the routine_day row to update' },
+        label: { type: 'string', description: 'New human-readable label, e.g. "Piernas", "Pull", "Full Body"' },
+        muscle_groups: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Muscle groups trained this day, e.g. ["Cuádriceps", "Isquiotibiales", "Glúteos"]',
+        },
+      },
+      required: ['routine_day_id'],
+    },
+  },
 ];
 
 // ─── Tool handlers (all scoped by user_id + tenant_id) ───────
@@ -320,6 +338,22 @@ async function assertDayOwnership(ctx: AuthCtx, routineDayId: string): Promise<b
   // @ts-expect-error joined shape
   const r = data.routines;
   return !!r && r.user_id === ctx.userId && r.tenant_id === ctx.tenantId;
+}
+
+async function executeUpdateRoutineDay(ctx: AuthCtx, input: any) {
+  if (!(await assertDayOwnership(ctx, input.routine_day_id))) {
+    return { success: false, error: 'Day not found in this tenant' };
+  }
+  const updates: Record<string, any> = {};
+  if (input.label !== undefined) updates.label = input.label;
+  if (input.muscle_groups !== undefined) updates.muscle_groups = input.muscle_groups;
+  if (Object.keys(updates).length === 0) return { success: false, error: 'No fields to update' };
+  const { error } = await supabaseAdmin
+    .from('routine_days')
+    .update(updates)
+    .eq('id', input.routine_day_id);
+  if (error) return { success: false, error: error.message };
+  return { success: true };
 }
 
 async function executeUpdateExercise(ctx: AuthCtx, input: any) {
@@ -550,6 +584,8 @@ async function executeTool(ctx: AuthCtx, toolName: string, input: any) {
       return executeUpdateExercise(ctx, input);
     case 'replace_exercise':
       return executeReplaceExercise(ctx, input);
+    case 'update_routine_day':
+      return executeUpdateRoutineDay(ctx, input);
     case 'add_exercise':
       return executeAddExercise(ctx, input);
     case 'remove_exercise':
