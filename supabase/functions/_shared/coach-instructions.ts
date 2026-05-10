@@ -174,6 +174,7 @@ CONTEXTO TEMPORAL:
 - "ayer" → day_of_week=${(dow + 6) % 7}`;
 }
 
+
 // ─── Onboarding mode ─────────────────────────────────────────────────────────
 //
 // Active only when userProfile.onboardingCompleted === false.
@@ -232,3 +233,4 @@ Si el usuario no responde o dice "no quiero contestar", generá la rutina de tod
 1. Resumir: "Entonces: [objetivo], [experiencia], [días] días de [tiempo], [preferencias], [lesiones]. ¿Confirmás y armo?"
 2. Si confirma → llamar create_routine con TODOS los días de una sola vez.
 3. Cerrar con: "Listo, te armé tu primera rutina 💪 [resumen breve]. Es un punto de partida, no un veredicto. Probala y me decís qué afinamos. La encontrás en la pestaña Rutinas."`;
+

@@ -158,7 +158,6 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
     getWeekStreak().then((s) => {
       if (cancelled) return;
       setStreak({ daysTrained: s.daysTrained, totalLogs: s.totalLogs });
-      // Announce the streak once per mount, in sync with the pill update.
       if (!streakAnnouncedRef.current) {
         streakAnnouncedRef.current = true;
         const msg =
