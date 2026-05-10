@@ -1,4 +1,4 @@
-import { useAuthStore, useChatStore, useCoachStyleStore } from '@/store';
+import { useAuthStore, useChatStore, useCoachStyleStore, toast } from '@/store';
 import type { ApiClient, ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/services/api';
 import type { ChatRequest } from '@/services/api';
@@ -134,12 +134,25 @@ export async function sendUserMessage(
       },
       onToolEnd: (toolName, success) => {
         useChatStore.getState().setActiveTool(null);
-        if (toolName === 'create_routine' && success) {
-          const user = useAuthStore.getState().user;
-          if (user && !user.onboardingCompleted) {
-            useAuthStore.getState().setUser({ ...user, onboardingCompleted: true });
-            markOnboardingCompleted(user.id).catch(() => {});
+        if (success) {
+          if (toolName === 'create_routine') {
+            toast.success('Rutina creada');
+            const user = useAuthStore.getState().user;
+            if (user && !user.onboardingCompleted) {
+              useAuthStore.getState().setUser({ ...user, onboardingCompleted: true });
+              markOnboardingCompleted(user.id).catch(() => {});
+            }
+          } else if (toolName === 'update_exercise') {
+            toast.success('Ejercicio actualizado');
+          } else if (toolName === 'replace_exercise') {
+            toast.success('Ejercicio reemplazado');
+          } else if (toolName === 'add_exercise') {
+            toast.success('Ejercicio agregado');
+          } else if (toolName === 'remove_exercise') {
+            toast.info('Ejercicio eliminado');
           }
+        } else {
+          toast.error(`No se pudo ejecutar ${toolName}`);
         }
       },
       onDone: (full) => {
@@ -148,6 +161,7 @@ export async function sendUserMessage(
       },
       onError: (msg) => {
         console.warn('[chat] stream error:', msg);
+        toast.error(msg || 'Error en el chat');
         finalize(msg);
       },
     },

@@ -3,6 +3,7 @@ import {
   ExpoSpeechRecognitionModule,
   useSpeechRecognitionEvent,
 } from 'expo-speech-recognition';
+import { toast } from '@/store';
 
 interface SpeechRecognitionResult {
   isListening: boolean;
@@ -24,6 +25,7 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
 
   useSpeechRecognitionEvent('error', (event) => {
     console.warn('[speech] error:', event.error, event.message);
+    toast.error('Error de reconocimiento de voz');
     setIsListening(false);
   });
 
@@ -35,6 +37,7 @@ export function useSpeechRecognition(): SpeechRecognitionResult {
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
       console.warn('[speech] permission denied');
+      toast.warning('Permiso de reconocimiento de voz denegado');
       return;
     }
 

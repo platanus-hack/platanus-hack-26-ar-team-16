@@ -2,6 +2,7 @@ import React from 'react';
 import { Image, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTheme } from '@/theme';
 
 const NOVEDADES = [
   {
@@ -40,8 +41,10 @@ const RECOMENDADOS = [
 ];
 
 export default function InicioScreen() {
+  const { tenant } = useTheme();
+  const c = tenant.colors;
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top']}>
       <View
         style={{
           flexDirection: 'row',
@@ -51,7 +54,7 @@ export default function InicioScreen() {
           paddingVertical: 12,
         }}
       >
-        <MaterialCommunityIcons name="bell-outline" size={22} color="#FFFFFF" />
+        <MaterialCommunityIcons name="bell-outline" size={22} color={c.text} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -62,7 +65,7 @@ export default function InicioScreen() {
             marginTop: 4,
             borderRadius: 14,
             overflow: 'hidden',
-            backgroundColor: '#1F1F1F',
+            backgroundColor: c.surfaceElevated,
             justifyContent: 'center',
             alignItems: 'center',
           }}
@@ -74,7 +77,7 @@ export default function InicioScreen() {
           />
           <Text
             style={{
-              color: '#FFFFFF',
+              color: c.text,
               fontSize: 28,
               fontWeight: '600',
               letterSpacing: 0.5,
@@ -88,7 +91,7 @@ export default function InicioScreen() {
 
         <Text
           style={{
-            color: '#B8B8B8',
+            color: c.textMuted,
             fontSize: 12,
             fontWeight: '500',
             letterSpacing: 1.5,
@@ -107,16 +110,16 @@ export default function InicioScreen() {
           {NOVEDADES.map((n) => (
             <View
               key={n.id}
-              style={{ width: 240, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
+              style={{ width: 240, borderRadius: 14, overflow: 'hidden', backgroundColor: c.surface }}
             >
               <Image source={{ uri: n.image }} style={{ width: '100%', height: 130 }} resizeMode="cover" />
               <View style={{ padding: 12 }}>
                 <Text
-                  style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
+                  style={{ color: c.text, fontSize: 13, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
                 >
                   {n.title}
                 </Text>
-                <Text style={{ color: '#888888', fontSize: 12 }}>{n.sede}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 12 }}>{n.sede}</Text>
               </View>
             </View>
           ))}
@@ -124,7 +127,7 @@ export default function InicioScreen() {
 
         <Text
           style={{
-            color: '#B8B8B8',
+            color: c.textMuted,
             fontSize: 12,
             fontWeight: '500',
             letterSpacing: 1.5,
@@ -143,16 +146,16 @@ export default function InicioScreen() {
           {RECOMENDADOS.map((r) => (
             <View
               key={r.id}
-              style={{ width: 200, borderRadius: 14, overflow: 'hidden', backgroundColor: '#161616' }}
+              style={{ width: 200, borderRadius: 14, overflow: 'hidden', backgroundColor: c.surface }}
             >
               <Image source={{ uri: r.image }} style={{ width: '100%', height: 110 }} resizeMode="cover" />
               <View style={{ padding: 12 }}>
                 <Text
-                  style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
+                  style={{ color: c.text, fontSize: 12, fontWeight: '600', letterSpacing: 0.4, marginBottom: 2 }}
                 >
                   {r.title}
                 </Text>
-                <Text style={{ color: '#888888', fontSize: 11 }}>{r.subtitle}</Text>
+                <Text style={{ color: c.textMuted, fontSize: 11 }}>{r.subtitle}</Text>
               </View>
             </View>
           ))}

@@ -1,14 +1,13 @@
 import "../global.css";
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore, useTenantStore } from "@/store";
+import { ToastHost } from "@/components/ui";
 import {
   getProfile,
   getTenantById,
   onAuthStateChange,
-  signInWithEmail,
 } from "@/services";
 
 function useProtectedRoute() {
@@ -16,37 +15,33 @@ function useProtectedRoute() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === "(auth)";
     if (!isAuthenticated && !inAuth) {
       router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuth) {
-      router.replace("/");
+      return;
     }
-  }, [isAuthenticated, segments, isLoading]);
-}
-
-// Web-only: visiting with ?demo=1 auto-signs into the demo account so the
-// landing's "Ver demo" button drops the visitor straight into the Megatlon
-// shell. The password is intentionally hardcoded — this account is public,
-// scoped to its own data via RLS, and exists only for live demos.
-function useDemoAutoLogin() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isLoading = useAuthStore((s) => s.isLoading);
-
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    if (typeof window === "undefined") return;
-    if (isLoading || isAuthenticated) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("demo") !== "1") return;
-    signInWithEmail("demo@gohan.ai", "GohanDemo2026!").catch((e) =>
-      // eslint-disable-next-line no-console
-      console.warn("[demo] auto-login failed", e),
-    );
-  }, [isAuthenticated, isLoading]);
+    if (isAuthenticated && inAuth) {
+      const target = user && !user.onboardingCompleted ? "/coach" : "/";
+      router.replace(target);
+      return;
+    }
+    // Already inside the app: if a freshly-signed-up user is on any tab
+    // other than coach, push them to the coach onboarding flow.
+    const segs = segments as readonly string[];
+    if (
+      isAuthenticated &&
+      user &&
+      !user.onboardingCompleted &&
+      segs[0] === "(tabs)" &&
+      segs[1] !== "coach"
+    ) {
+      router.replace("/coach");
+    }
+  }, [isAuthenticated, segments, isLoading, user]);
 }
 
 export default function RootLayout() {
@@ -83,7 +78,6 @@ export default function RootLayout() {
     return unsubscribe;
   }, []);
 
-  useDemoAutoLogin();
   useProtectedRoute();
 
   return (
@@ -101,6 +95,7 @@ export default function RootLayout() {
           }}
         />
       </Stack>
+      <ToastHost />
     </>
   );
 }

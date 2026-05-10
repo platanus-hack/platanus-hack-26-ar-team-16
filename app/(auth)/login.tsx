@@ -6,12 +6,16 @@ import {
   Platform,
   Image,
   ScrollView,
+  Pressable,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useTheme } from '@/theme';
-import { signInWithEmail, signInWithGoogle } from '@/services';
+import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/services';
+import { toast } from '@/store';
+
+type Mode = 'login' | 'register';
 
 const DEMO_EMAIL = 'demo@gohan.ai';
 const DEMO_PASSWORD = 'GohanDemo2026!';
@@ -24,14 +28,18 @@ function shouldAutoLogin() {
 }
 
 export default function LoginScreen() {
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [autoLoginActive] = useState(shouldAutoLogin);
   const autoTriggered = useRef(false);
   const theme = useTheme();
+
+  const isRegister = mode === 'register';
 
   useEffect(() => {
     if (!autoLoginActive || autoTriggered.current) return;
@@ -41,21 +49,58 @@ export default function LoginScreen() {
     });
   }, [autoLoginActive]);
 
-  const handleLogin = async () => {
+  const handleSubmit = async () => {
     if (!email || !password) {
-      setError('Ingresá email y contraseña');
+      const msg = 'Ingresá email y contraseña';
+      setError(msg);
+      toast.warning(msg);
       return;
+    }
+    if (isRegister) {
+      if (password.length < 6) {
+        const msg = 'La contraseña debe tener al menos 6 caracteres';
+        setError(msg);
+        toast.warning(msg);
+        return;
+      }
+      if (password !== confirmPassword) {
+        const msg = 'Las contraseñas no coinciden';
+        setError(msg);
+        toast.warning(msg);
+        return;
+      }
     }
     setError(null);
     setLoading(true);
     try {
-      const { error: authError } = await signInWithEmail(email, password);
-      if (authError) {
-        setError(authError.message);
-        return;
+      if (isRegister) {
+        const { data, error: signUpError } = await signUpWithEmail(email, password);
+        if (signUpError) {
+          setError(signUpError.message);
+          toast.error(signUpError.message);
+          return;
+        }
+        if (!data.session) {
+          const { error: signInError } = await signInWithEmail(email, password);
+          if (signInError) {
+            toast.info('Te enviamos un email para confirmar tu cuenta. Revisá tu inbox.');
+            return;
+          }
+        }
+        toast.success('¡Cuenta creada! Bienvenido.');
+      } else {
+        const { error: authError } = await signInWithEmail(email, password);
+        if (authError) {
+          setError(authError.message);
+          toast.error(authError.message);
+          return;
+        }
+        toast.success('Sesión iniciada');
       }
     } catch {
-      setError('Error al iniciar sesión');
+      const msg = isRegister ? 'Error al registrarse' : 'Error al iniciar sesión';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -68,20 +113,38 @@ export default function LoginScreen() {
       const { error: authError } = await signInWithGoogle();
       if (authError) {
         setError(authError.message);
+        toast.error(authError.message);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Error con Google');
+      const msg = e instanceof Error ? e.message : 'Error con Google';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setGoogleLoading(false);
     }
   };
 
+  const toggleMode = () => {
+    setError(null);
+    setConfirmPassword('');
+    setMode((prev) => (prev === 'login' ? 'register' : 'login'));
+  };
+
   if (autoLoginActive) {
     return (
-      <View className="flex-1 bg-white items-center justify-center" style={{ gap: 16 }}>
+      <View
+        className={`flex-1 items-center justify-center ${theme.tenant.classNames.pageBg}`}
+        style={{ gap: 16 }}
+      >
         <ActivityIndicator size="large" color={theme.primary} />
-        <Text className="text-sm text-slate-500">Cargando demo…</Text>
-        {error && <Text className="text-sm text-red-500 px-6 text-center">{error}</Text>}
+        <Text className={`text-sm ${theme.tenant.classNames.textMuted}`}>
+          Cargando demo…
+        </Text>
+        {error && (
+          <Text className="text-sm px-6 text-center" style={{ color: theme.tenant.colors.danger }}>
+            {error}
+          </Text>
+        )}
       </View>
     );
   }
@@ -89,7 +152,7 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1 bg-white"
+      className={`flex-1 ${theme.tenant.classNames.pageBg}`}
     >
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}
@@ -110,10 +173,10 @@ export default function LoginScreen() {
                 <Ionicons name="barbell" size={32} color="#FFFFFF" />
               </View>
             )}
-            <Text className="text-3xl font-bold text-slate-900 mt-4">
+            <Text className={`text-3xl font-bold mt-4 ${theme.tenant.classNames.text}`}>
               {theme.brandName}
             </Text>
-            <Text className="text-base text-slate-500 mt-1">
+            <Text className={`text-base mt-1 ${theme.tenant.classNames.textMuted}`}>
               Tu personal trainer con IA
             </Text>
           </View>
@@ -135,14 +198,30 @@ export default function LoginScreen() {
               placeholder="••••••••"
               secureTextEntry
             />
+            {isRegister && (
+              <Input
+                label="Confirmar contraseña"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="••••••••"
+                secureTextEntry
+              />
+            )}
             {error && <Text className="text-sm text-red-500">{error}</Text>}
-            <Button
-              label="Iniciar sesión"
-              onPress={handleLogin}
-              loading={loading}
-              fullWidth
-              backgroundColor="#FF6B00"
-            />
+            <Pressable
+              onPress={handleSubmit}
+              disabled={loading}
+              className="w-full bg-blue-600 rounded-2xl py-3 items-center justify-center"
+              style={({ pressed }) => ({ opacity: loading ? 0.5 : pressed ? 0.85 : 1 })}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text className="text-white text-base font-semibold">
+                  {isRegister ? 'Registrate' : 'Login'}
+                </Text>
+              )}
+            </Pressable>
             <Button
               label="Continuar con Google"
               variant="secondary"
@@ -150,6 +229,14 @@ export default function LoginScreen() {
               loading={googleLoading}
               onPress={handleGoogle}
             />
+            <Pressable onPress={toggleMode} className="items-center pt-2">
+              <Text className={`text-sm ${theme.tenant.classNames.textMuted}`}>
+                {isRegister ? '¿Ya tenés cuenta? ' : '¿No tenés cuenta? '}
+                <Text className="font-semibold" style={{ color: theme.primary }}>
+                  {isRegister ? 'Iniciá sesión' : 'Registrate'}
+                </Text>
+              </Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
