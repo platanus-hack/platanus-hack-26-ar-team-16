@@ -25,6 +25,15 @@ export interface CoachConfig {
    * deployment.
    */
   anonKey?: string;
+  /**
+   * Optional external user id (the gym's own user identifier). Forwarded to
+   * the API as `X-External-Id` on every request. Used together with a
+   * `gk_live_*` tenant API key as the `getAuthToken` source so the edge
+   * function / MCP server can resolve the corresponding `(tenant_id,
+   * external_id)` profile without a Gohan-issued session JWT. Ignored when
+   * the auth token is a session JWT (server derives identity from claims).
+   */
+  externalId?: string;
 }
 
 export interface ApiRequestInit {

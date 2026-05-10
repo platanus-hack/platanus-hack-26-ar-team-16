@@ -36,6 +36,13 @@ export interface GohanCoachProps {
   onError?: (e: Error) => void;
   /** Anon/publishable key for the Supabase functions gateway. */
   anonKey?: string;
+  /**
+   * The gym's own user id. Forwarded as `X-External-Id` on every request so
+   * the edge functions / MCP server can resolve the matching profile when
+   * the auth token is a tenant API key (`gk_live_*`). Ignored on the
+   * standalone path where `userId` is a Gohan profile id.
+   */
+  externalId?: string;
   /** Which screen to land on. */
   initialView?: 'chat' | 'routine';
   /**
@@ -53,6 +60,7 @@ export function GohanCoach({
   tenantSlug = 'default',
   onError,
   anonKey,
+  externalId,
   initialView = 'chat',
   chatEndpoint = 'ai-chat',
 }: GohanCoachProps) {
@@ -61,8 +69,8 @@ export function GohanCoach({
   const currentUserId = useAuthStore((s) => s.user?.id ?? null);
 
   const config = useMemo<CoachConfig>(
-    () => ({ apiBaseUrl, getAuthToken, anonKey }),
-    [apiBaseUrl, getAuthToken, anonKey],
+    () => ({ apiBaseUrl, getAuthToken, anonKey, externalId }),
+    [apiBaseUrl, getAuthToken, anonKey, externalId],
   );
 
   const reportError = useCallback(

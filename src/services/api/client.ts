@@ -19,7 +19,7 @@ function joinUrl(base: string, path: string): string {
 }
 
 export function createApiClient(config: CoachConfig): ApiClient {
-  const { apiBaseUrl, getAuthToken, anonKey } = config;
+  const { apiBaseUrl, getAuthToken, anonKey, externalId } = config;
 
   async function buildHeaders(extra: Record<string, string> = {}): Promise<Record<string, string>> {
     const headers: Record<string, string> = {
@@ -27,6 +27,13 @@ export function createApiClient(config: CoachConfig): ApiClient {
       ...extra,
     };
     if (anonKey) headers.apikey = anonKey;
+    // Forward the gym's own user id when configured. The MCP server / edge
+    // functions resolve the matching `(tenant_id, external_id)` profile when
+    // the auth token is a tenant API key. Harmless when the token is a
+    // session JWT (server prefers claims).
+    if (externalId && headers['X-External-Id'] === undefined) {
+      headers['X-External-Id'] = externalId;
+    }
     const token = await getAuthToken().catch(() => null);
     if (token) {
       headers.Authorization = `Bearer ${token}`;
