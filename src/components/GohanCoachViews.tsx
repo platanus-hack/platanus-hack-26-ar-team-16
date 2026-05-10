@@ -4,10 +4,11 @@
 // keeps using its tab screens — those screens delegate to these views (see
 // next commit) so render code lives in exactly one place.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 
 import { MessageList, MessageInput, CoachStylePicker } from '@/components/chat';
 import {
@@ -28,7 +29,7 @@ import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
 import { useSpeechRecognition, useRealtimeRoutine } from '@/hooks';
 import { normalizeRoutine, sortExercises } from '@/modules/routine/groupByDay';
 import type { Exercise } from '@/modules/routine/types';
-import { setActiveRoutine } from '@/services/routines';
+import { getActiveRoutine, listUserRoutines, setActiveRoutine } from '@/services/routines';
 import { toast } from '@/store';
 
 interface CommonProps {
@@ -123,6 +124,22 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   const userId = useAuthStore((s) => s.user?.id ?? null) ?? undefined;
 
   useRealtimeRoutine(userId);
+
+  // Refetch whenever this tab becomes focused — covers cases where a Realtime
+  // event was missed or onToolEnd's refetch had a transient error.
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      Promise.all([getActiveRoutine(userId), listUserRoutines(userId)])
+        .then(([routine, routines]) => {
+          useRoutineStore.getState().setRoutine(routine);
+          useRoutineStore.getState().setRoutines(routines);
+        })
+        .catch((err) => {
+          console.warn('[CoachRoutineView] focus refetch failed', err);
+        });
+    }, [userId]),
+  );
 
   const rawRoutine = useRoutineStore((s) => s.routine);
   const routines = useRoutineStore((s) => s.routines);

@@ -9,6 +9,7 @@ import { createApiClient } from '@/services/api/client';
 const ROUTINE_MUTATING_TOOLS = new Set([
   'create_routine', 'update_exercise', 'replace_exercise',
   'add_exercise', 'remove_exercise', 'switch_routine', 'delete_routine',
+  'update_routine_day',
 ]);
 
 const MOCK_CONVERSATION_ID = 'mock-conversation';
@@ -159,6 +160,8 @@ export async function sendUserMessage(
             toast.success('Ejercicio agregado');
           } else if (toolName === 'remove_exercise') {
             toast.info('Ejercicio eliminado');
+          } else if (toolName === 'update_routine_day') {
+            toast.success('Día actualizado');
           }
 
           if (ROUTINE_MUTATING_TOOLS.has(toolName)) {
@@ -169,7 +172,9 @@ export async function sendUserMessage(
                   useRoutineStore.getState().setRoutine(routine);
                   useRoutineStore.getState().setRoutines(routines);
                 })
-                .catch(() => {});
+                .catch((err) => {
+                  console.warn('[ChatManager] routine refetch after tool failed', err);
+                });
             }
           }
         } else {

@@ -80,7 +80,13 @@ MÚLTIPLES RUTINAS:
 - El usuario puede tener varias rutinas guardadas en paralelo (ej. "Regular", "Vacaciones", "Bulk", "Cut"). Las modificaciones (update/add/remove/replace_exercise) impactan SOLO la rutina activa.
 - Si pide una rutina nueva con un contexto distinto (viaje, etapa de bulk/cut, etc.), usá create_routine con un routine_name corto y descriptivo. La rutina anterior queda guardada, no se borra.
 - Si pide cambiar a otra rutina ("volvé a la regular", "pasame a la de vacaciones"), usá switch_routine. Si no estás seguro de cuál, llamá list_routines primero.
-- Para renombrar o borrar, usá rename_routine / delete_routine. Confirmá antes de borrar.`;
+- Para renombrar o borrar, usá rename_routine / delete_routine. Confirmá antes de borrar.
+
+CAMBIAR EL FOCO DE UN DÍA (ej. "cambiá el lunes a piernas"):
+1. Llamá update_routine_day con el routine_day_id del día, el nuevo label (ej. "Piernas") y los muscle_groups (ej. ["Cuádriceps","Isquiotibiales","Glúteos"]).
+2. Luego remove_exercise para cada ejercicio que ya no corresponda.
+3. Luego add_exercise para agregar los ejercicios nuevos del nuevo foco.
+NUNCA describas este cambio solo en texto — siempre usá las tools.`;
 
 // ─── UI visual components (JSONL inline) ─────────────────────────────────────
 //
