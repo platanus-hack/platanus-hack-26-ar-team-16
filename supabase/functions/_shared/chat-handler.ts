@@ -10,6 +10,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.39.0';
 import {
   getCoachPersonality,
+  getTemporalContext,
   CORE_IDENTITY,
   FORMAT_RULES,
   SCOPE_RULES,
@@ -547,7 +548,7 @@ ${SCOPE_RULES}
 ${TOOL_RULES}
 
 ${UI_RULES}
-${profileBlock}${onboardingBlock}`;
+${getTemporalContext()}${profileBlock}${onboardingBlock}`;
 }
 
 // ─── Routine context fetch (scoped by user_id + tenant_id) ──

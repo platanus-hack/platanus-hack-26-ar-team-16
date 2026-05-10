@@ -73,7 +73,8 @@ export const TOOL_RULES = `USO DE HERRAMIENTAS:
 - Después de usar una tool, confirmá brevemente qué hiciste.
 - Para rutinas nuevas, usá create_routine con TODOS los días de una.
 - CRÍTICO: Cuando el usuario mencione un día específico (ej. "del miércoles"), buscá el exercise_id de ESE día. El mismo ejercicio puede estar en varios días — usá el ID correcto del día que dijo.
-- Si no especifica día, PREGUNTÁ cuál antes de modificar.
+- Si dice "hoy", "del día" o "esta sesión" → usá el day_of_week del CONTEXTO TEMPORAL, no preguntes.
+- Solo PREGUNTÁ el día cuando es genuinamente ambiguo (sin referencia temporal explícita).
 
 MÚLTIPLES RUTINAS:
 - El usuario puede tener varias rutinas guardadas en paralelo (ej. "Regular", "Vacaciones", "Bulk", "Cut"). Las modificaciones (update/add/remove/replace_exercise) impactan SOLO la rutina activa.
@@ -190,3 +191,40 @@ Si el usuario no responde o dice "no quiero contestar", generá la rutina de tod
 1. Resumir: "Entonces: [objetivo], [experiencia], [días] días de [tiempo], [preferencias], [lesiones]. ¿Confirmás y armo?"
 2. Si confirma → llamar create_routine con TODOS los días de una sola vez.
 3. Cerrar con: "Listo, te armé tu primera rutina 💪 [resumen breve]. Es un punto de partida, no un veredicto. Probala y me decís qué afinamos. La encontrás en la pestaña Rutinas."`;
+
+// ─── Temporal context ────────────────────────────────────────────────────────
+//
+// Injected into every prompt so the coach knows what day/time it is and can
+// resolve "hoy", "mañana", "ayer" to the correct day_of_week without asking.
+// Hardcoded to Argentina for v1. For multi-tenant expansion (BR/US), pass
+// timezone from the client and propagate via userProfile.
+
+export function getTemporalContext(timezone = 'America/Argentina/Buenos_Aires'): string {
+  const now = new Date();
+  const dateFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+  const dayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  const dow = dayMap[dowFmt.format(now)] ?? 0;
+
+  return `
+CONTEXTO TEMPORAL:
+- Hoy es ${dateFmt.format(now)}, ${timeFmt.format(now)}hs (${timezone})
+- day_of_week actual: ${dow} (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb)
+- "hoy" / "del día" / "esta sesión" → day_of_week=${dow}
+- "mañana" → day_of_week=${(dow + 1) % 7}
+- "ayer" → day_of_week=${(dow + 6) % 7}`;
+}
