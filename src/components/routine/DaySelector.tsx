@@ -63,17 +63,19 @@ const styles = StyleSheet.create({
   pill: {
     minWidth: 110,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingTop: 10,
+    paddingBottom: 12,
     borderRadius: 14,
     backgroundColor: '#1A1A1A',
     alignItems: 'flex-start',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   pillActive: {
     backgroundColor: '#FF6B00',
   },
   weekday: {
     fontSize: 10,
+    lineHeight: 14,
     fontWeight: '600',
     color: '#888',
     letterSpacing: 1.2,
@@ -84,9 +86,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
+    lineHeight: 22,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.3,
+    includeFontPadding: false as any,
   },
   labelActive: {
     color: '#000',
