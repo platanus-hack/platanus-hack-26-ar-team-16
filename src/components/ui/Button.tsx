@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pressable, Text, ActivityIndicator, View } from 'react-native';
 import { useTheme } from '@/theme';
 
@@ -42,7 +42,6 @@ export function Button({
 }: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
-  const [pressed, setPressed] = useState(false);
 
   const bgColor =
     backgroundColor ??
@@ -59,13 +58,11 @@ export function Button({
     <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
       className={`${sizePadding[size]} rounded-2xl flex-row items-center justify-center ${fullWidth ? 'w-full' : ''}`}
-      style={{
+      style={({ pressed }) => ({
         backgroundColor: bgColor,
         opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1,
-      }}
+      })}
     >
       {loading ? (
         <ActivityIndicator color={textColor} />
