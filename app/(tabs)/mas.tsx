@@ -9,9 +9,8 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-
-// ASSUMPTION: useAuthStore at this path, s.user.displayName. Fix here if differs.
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { signOut } from '../../src/services/auth';
 
 const ROWS = [
   { id: 'reservas', label: 'RESERVAS', icon: 'calendar-blank-outline', section: 'top' },
@@ -162,7 +161,9 @@ export default function MasScreen() {
 
         <View style={{ paddingHorizontal: 20, paddingTop: 24 }}>
           <Text style={{ color: '#666666', fontSize: 14, marginBottom: 12 }}>Acerca de Megatlon</Text>
-          <Text style={{ color: '#666666', fontSize: 14, marginBottom: 12 }}>Cerrar sesión</Text>
+          <Pressable onPress={() => signOut()} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+            <Text style={{ color: '#FF6B00', fontSize: 14, marginBottom: 12 }}>Cerrar sesión</Text>
+          </Pressable>
           <Text style={{ color: '#444444', fontSize: 11 }}>Versión 3.0.1</Text>
         </View>
 
