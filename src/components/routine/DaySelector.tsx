@@ -23,7 +23,9 @@ export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps)
       {days.map((day, idx) => {
         const isActive = day.id === selectedDayId;
         const abbrev = DAY_ABBREVS[day.day_index] ?? DAY_ABBREVS[idx % 7];
-        const label = (day.name || day.muscle_groups?.[0] || '').toUpperCase();
+        const isRest = !day.exercises?.length;
+        const muscle = isRest ? 'REST' : (day.muscle_groups?.[0] ?? day.name);
+        const label = (muscle || '').toUpperCase();
 
         return (
           <Pressable

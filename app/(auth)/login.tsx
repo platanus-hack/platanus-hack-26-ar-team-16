@@ -9,7 +9,6 @@ import {
   Pressable,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/services';
@@ -167,12 +166,11 @@ export default function LoginScreen() {
                 className="w-16 h-16 rounded-2xl"
               />
             ) : (
-              <View
-                className="w-16 h-16 rounded-2xl items-center justify-center"
-                style={{ backgroundColor: theme.primary }}
-              >
-                <Ionicons name="barbell" size={32} color="#FFFFFF" />
-              </View>
+              <Image
+                source={require('../../assets/Logo.png')}
+                style={{ width: 80, height: 80 }}
+                resizeMode="contain"
+              />
             )}
             <Text
               className="text-3xl font-bold mt-4"
