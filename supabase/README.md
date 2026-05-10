@@ -3,7 +3,7 @@
 Owner: @DanteDia
 
 > **Project is already provisioned.** Ref: `cjflwpcxfprxxjbhjxlo` (region `sa-east-1`).
-> Migrations 001 + 002 are applied. The `ai-chat` edge function is deployed.
+> Migrations 001-004 are applied. The `ai-chat` edge function is deployed.
 > Credentials live in `.env.local` (gitignored). Get them from Dante or the
 > Supabase dashboard if you need to set up a fresh device.
 
@@ -11,7 +11,37 @@ Owner: @DanteDia
 
 - `migrations/001_initial_schema.sql` — base tables, indexes, realtime publication, default tenant.
 - `migrations/002_rls_and_storage.sql` — RLS policies, `handle_new_user` trigger, `chat-audio` storage bucket.
-- `functions/ai-chat/` — edge function that proxies Claude (owner: @Juampiman).
+- `migrations/003_realtime_routines.sql` — adds `routines` to the realtime publication (so `is_active` flips reach subscribers).
+- `migrations/004_external_identity_and_api_keys.sql` — Phase 1 of the B2B refactor (see ARCHITECTURE.md §4/§10/§11): adds external identity columns + `tenant_api_keys` + `tenant_signing_secrets` + `usage_events`.
+- `migrations/005_relax_profiles_auth_fk.sql` — drops the FK `profiles.id → auth.users.id` so gym-origin users (no Supabase Auth row) can have profiles. **Not applied yet** — see "Migration log" below.
+- `functions/ai-chat/` — edge function that proxies Claude for the standalone consumer flow (owner: @Juampiman).
+- `functions/api-chat/`, `functions/api-keys/`, `functions/api-session/` — B2B endpoints from the §10 architecture. Need migration 005 applied to be fully functional for gym-origin users.
+
+## Migration log (applied, in order)
+
+| Version | Name | Applied | Notes |
+|---------|------|---------|-------|
+| `20260509080943` | initial_schema | day 0 | base tables |
+| `20260509081026` | rls_and_storage | day 0 | per-user RLS + chat-audio bucket |
+| `20260509084822` | realtime_routines | day 0 | adds `routines` to realtime publication |
+| `20260510051339` | external_identity_and_api_keys | 2026-05-10 | Phase 1 B2B foundation. See "What 004 changed" below |
+| — | relax_profiles_auth_fk (005) | **PENDING** | Removes FK profile→auth.users. Standalone signup keeps working via the trigger; required only to unblock gym-origin user inserts. Apply when the api-session function is ready to serve gym JWTs. |
+
+### What 004 changed (operational summary)
+
+Aplicada 2026-05-10 contra prod (`cjflwpcxfprxxjbhjxlo`). Cambios verificados post-apply:
+
+- **`profiles`**: agregadas 3 columnas — `external_id TEXT`, `external_idp TEXT`, `last_active_at TIMESTAMPTZ`. Backfill: 5 filas existentes quedaron con `external_idp='gohan'`, `external_id=id::text`. Constraint `UNIQUE(tenant_id, external_id)` agregada (verificada sin colisiones antes del apply).
+- **`routines`**: agregada `tenant_id UUID NOT NULL REFERENCES tenants(id)`. Backfill desde `profiles.tenant_id` cubrió las 2 filas existentes. ADR #7 lo justifica (evita join hot por path).
+- **3 tablas nuevas** (todas con RLS *enabled* sin policies → solo service-role-key accede):
+  - `tenant_api_keys` — keys hasheadas SHA-256, kid rotation, `revoked_at` para soft-delete.
+  - `tenant_signing_secrets` — secretos HS256 por tenant para firmar JWTs custom del gym.
+  - `usage_events` — telemetry por call (tokens, tool_calls, latency, model). Para billing B2B.
+- **Trigger refresh**: `handle_new_user()` ahora setea `external_idp='gohan'`, `external_id=auth.users.id`, `last_active_at=NOW()` automáticamente al signup. Comportamiento de tenant resolution (`raw_user_meta_data.tenant_slug` → `default`) sin cambios.
+
+**Reversibilidad**: todo es reversible (DROP COLUMN, DROP TABLE, restaurar trigger viejo). No hay data loss.
+
+**Razón del cambio** — necesario para que el modelo de auth multi-source (§10 ARCHITECTURE) funcione: tres caminos (gym JWT / Supabase JWT / API key) que convergen en `profiles` keyed por `(tenant_id, external_id)`. Sin estas columnas, no se puede distinguir un user de Megatlon del mismo email que un user standalone, ni rastrear de qué IdP vino.
 
 ## How to run from a fresh checkout
 
