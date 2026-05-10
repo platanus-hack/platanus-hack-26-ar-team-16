@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
 import {
   getActiveRoutine,
-  getRoutineIdsForUser,
   listUserRoutines,
 } from '../services/routines';
 import { supabase } from '../services/supabase';
 import { useRoutineStore } from '../store';
 import { useCoachContextOrNull } from '../modules/coach/CoachProvider';
 
-// Subscribes to Supabase realtime on routine_days and routine_exercises.
+// Subscribes to Supabase realtime on routines, routine_days, routine_exercises.
 // Whenever the AI mutates the routine (via tool_use → edge function),
 // we refetch the active routine and push it into the Zustand store
 // so the Routine screen rerenders without manual refresh.
@@ -19,12 +18,11 @@ import { useCoachContextOrNull } from '../modules/coach/CoachProvider';
 //     state is fragile. A debounced refetch keeps the store consistent
 //     with the DB and is fast enough for the demo (single user, small payload).
 //
-// Cross-tenant leak fix (ARCHITECTURE.md §11): the previous version
-// subscribed to ALL `routine_days` and `routine_exercises` rows because
-// neither table carries a `user_id` column we could filter on. We now
-// resolve the user's `routine.id` set first and filter the child-table
-// subscriptions with `routine_id=in.(...)`. RLS still gates the actual
-// payload, but this also stops *event* fan-out across tenants.
+// Wire-side scoping (ARCHITECTURE.md §16.1, migration 008): user_id is
+// denormalized onto routine_days and routine_exercises, mirroring ADR #7's
+// treatment of routines.tenant_id. Every subscription now filters by
+// `user_id=eq.${userId}` at the wire — events stay scoped per-user
+// regardless of how many tenants share the cluster.
 export function useRealtimeRoutine(userId: string | undefined) {
   const setRoutine = useRoutineStore((s) => s.setRoutine);
   const setRoutines = useRoutineStore((s) => s.setRoutines);
@@ -75,18 +73,6 @@ export function useRealtimeRoutine(userId: string | undefined) {
     let unsubscribe: (() => void) | null = null;
 
     (async () => {
-      // Resolve the user's routine IDs once so we can scope the child-table
-      // subscriptions. If the user has no routines yet (first-time user),
-      // we still subscribe to `routines` so we react to the first insert.
-      let routineIds: string[] = [];
-      try {
-        routineIds = await getRoutineIdsForUser(userId!);
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.warn('[useRealtimeRoutine] failed to resolve routine ids', err);
-      }
-      if (cancelled) return;
-
       // Apply auth on the realtime client when a non-Supabase token getter
       // is available (embedded path). Wrapped in try/catch so a token the
       // gateway rejects doesn't crash the screen.
@@ -105,30 +91,18 @@ export function useRealtimeRoutine(userId: string | undefined) {
           );
         }
       }
-
-      const filterIds = routineIds.length > 0 ? routineIds.join(',') : '__none__';
+      if (cancelled) return;
 
       const channel = supabase
         .channel(`routine-${userId}`)
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'routines', filter: `user_id=eq.${userId}` },
-          () => {
-            // A routine row changed — IDs might have shifted (insert/delete).
-            // Refresh our id cache opportunistically. The next event from
-            // routine_days/_exercises will use the latest filter on next
-            // mount; for now we just refetch the routine.
-            scheduleRefetch();
-          },
+          scheduleRefetch,
         )
         .on(
           'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'routine_days',
-            filter: `routine_id=in.(${filterIds})`,
-          },
+          { event: '*', schema: 'public', table: 'routine_days', filter: `user_id=eq.${userId}` },
           scheduleRefetch,
         )
         .on(
@@ -136,14 +110,8 @@ export function useRealtimeRoutine(userId: string | undefined) {
           {
             event: '*',
             schema: 'public',
-            // routine_exercises has no routine_id column — it joins through
-            // routine_day_id. We cannot pre-filter at the wire without a
-            // routine_day_id list, which would explode on every day add/remove.
-            // Server-side RLS still scopes payloads to the current user, so
-            // this stays correct for the standalone path. Tracked: Phase 3
-            // moves child-table fan-out behind a server view that exposes
-            // `user_id` so the filter can be tightened wire-side.
             table: 'routine_exercises',
+            filter: `user_id=eq.${userId}`,
           },
           scheduleRefetch,
         )

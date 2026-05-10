@@ -2,13 +2,13 @@ import { useEffect, useRef } from 'react';
 import { Animated, View } from 'react-native';
 
 function Dot({ delay }: { delay: number }) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0.25)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(delay),
         Animated.timing(opacity, { toValue: 1, duration: 350, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 0.3, duration: 350, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0.25, duration: 350, useNativeDriver: true }),
       ]),
     );
     loop.start();
@@ -18,10 +18,10 @@ function Dot({ delay }: { delay: number }) {
     <Animated.View
       style={{
         opacity,
-        width: 6,
-        height: 6,
+        width: 5,
+        height: 5,
         borderRadius: 3,
-        backgroundColor: '#94A3B8',
+        backgroundColor: '#888',
       }}
     />
   );
@@ -33,14 +33,10 @@ export function TypingIndicator() {
       style={{
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F1F5F9',
-        borderRadius: 16,
-        borderBottomLeftRadius: 6,
         alignSelf: 'flex-start',
-        marginBottom: 8,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 6,
+        marginBottom: 22,
+        paddingVertical: 4,
+        gap: 5,
       }}
     >
       <Dot delay={0} />

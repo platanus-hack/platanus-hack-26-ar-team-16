@@ -2,7 +2,6 @@ import { useAuthStore, useChatStore, useCoachStyleStore, useRoutineStore, toast 
 import type { ApiClient, ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/services/api';
 import type { ChatRequest } from '@/services/api';
-import { markOnboardingCompleted } from '@/services';
 import { getActiveRoutine, listUserRoutines } from '@/services/routines';
 import { createApiClient } from '@/services/api/client';
 
@@ -147,10 +146,14 @@ export async function sendUserMessage(
         if (success) {
           if (toolName === 'create_routine') {
             toast.success('Rutina creada');
+            // Mirror the server-side flip into local store so ONBOARDING MODE
+            // stops gating the next turn's system prompt without waiting for
+            // the next profile fetch. The DB write is owned by
+            // _shared/chat-handler.ts:executeCreateRoutine — do NOT add a
+            // client-side write here, that was the dual-write removed in §16.11.
             const user = useAuthStore.getState().user;
             if (user && !user.onboardingCompleted) {
               useAuthStore.getState().setUser({ ...user, onboardingCompleted: true });
-              markOnboardingCompleted(user.id).catch(() => {});
             }
           } else if (toolName === 'update_exercise') {
             toast.success('Ejercicio actualizado');

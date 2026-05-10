@@ -66,9 +66,3 @@ export async function updateProfile(
   if (error) throw error;
 }
 
-export async function markOnboardingCompleted(
-  userId: string,
-  client?: Db,
-): Promise<void> {
-  await updateProfile(userId, { onboardingCompleted: true }, client);
-}

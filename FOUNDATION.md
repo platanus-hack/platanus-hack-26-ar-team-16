@@ -1,5 +1,7 @@
 # GOHAN AI - Documento Fundacional
 
+> **Status (2026-05-10):** This is the *founding* doc — the week-1 vision, scope, and team delegation. Sections 1–4 (Vision / Problema / Diferenciadores / Modelo de Negocio / Screens) are still current. Sections from "Estructura de Directorios" onward describe the *initial* MVP layout and team split; the codebase has since grown (extra tabs, a dashboard/, a landing/, an npm package, multiple edge functions, denormalized child tables, a wearables bridge). For the up-to-date architectural state — including data model, security model, build pipeline, and pending decisions — see **`docs/ARCHITECTURE.md`**, which is the single source of truth per `CLAUDE.md`. When the two documents disagree, ARCHITECTURE.md wins.
+
 ## Vision
 
 Gohan AI es un sistema de **módulos integrables** que convierte cualquier app de gimnasio existente en un **personal trainer inteligente**. El usuario conversa con una IA especializada en fitness que genera y adapta rutinas personalizadas en tiempo real.

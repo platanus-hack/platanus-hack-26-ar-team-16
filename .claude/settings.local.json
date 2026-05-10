@@ -39,7 +39,11 @@
       "Bash(npx expo *)",
       "Bash(timeout 30 bash -c 'until grep -qE \"Web is waiting|Logs for your project|Metro waiting|Web Bundling|http://localhost\" \"C:/Users/aleni/AppData/Local/Temp/claude/C--Users-aleni-Desktop-platanus-hack-26-ar-team-16/f8860de9-7406-4b89-be6a-3b86f32fcdc9/tasks/bk4cqj1jw.output\" 2>/dev/null; do sleep 1; done')",
       "PowerShell(Get-NetTCPConnection *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./mcp-server/package.json'\\).scripts,null,2\\)\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./dashboard/package.json'\\).scripts,null,2\\)\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./landing/package.json'\\).scripts,null,2\\)\\)\")",
+      "Bash(node -e \"console.log\\(JSON.stringify\\(require\\('./packages/react-native-coach/package.json'\\).scripts,null,2\\)\\)\")"
     ]
   }
 }

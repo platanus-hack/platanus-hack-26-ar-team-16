@@ -279,6 +279,8 @@ async function executeCreateRoutine(ctx: AuthCtx, input: any) {
       .from('routine_days')
       .insert({
         routine_id: routine.id,
+        user_id: ctx.userId,
+        tenant_id: ctx.tenantId,
         day_of_week: day.day_of_week,
         muscle_groups: day.muscle_groups,
         label: day.label,
@@ -290,6 +292,8 @@ async function executeCreateRoutine(ctx: AuthCtx, input: any) {
 
     const exercises = day.exercises.map((ex: any, idx: number) => ({
       routine_day_id: routineDay.id,
+      user_id: ctx.userId,
+      tenant_id: ctx.tenantId,
       exercise_name: ex.exercise_name,
       sets: ex.sets,
       reps: ex.reps,
@@ -313,31 +317,30 @@ async function executeCreateRoutine(ctx: AuthCtx, input: any) {
   return { success: true, routine_id: routine.id };
 }
 
-// Asserts the exercise belongs to a routine owned by (userId, tenantId).
+// Asserts the exercise belongs to (userId, tenantId).
+// Post-migration 008, user_id and tenant_id are denormalized onto
+// routine_exercises directly — no JOIN needed.
 async function assertExerciseOwnership(ctx: AuthCtx, exerciseId: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('routine_exercises')
-    .select('id, routine_days!inner(routines!inner(user_id, tenant_id))')
+    .select('user_id, tenant_id')
     .eq('id', exerciseId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return false;
-  // @ts-expect-error joined shape
-  const r = data.routine_days?.routines;
-  return !!r && r.user_id === ctx.userId && r.tenant_id === ctx.tenantId;
+  return data.user_id === ctx.userId && data.tenant_id === ctx.tenantId;
 }
 
+// Same shape as assertExerciseOwnership; routine_days carries (user_id, tenant_id) post-008.
 async function assertDayOwnership(ctx: AuthCtx, routineDayId: string): Promise<boolean> {
   const { data, error } = await supabaseAdmin
     .from('routine_days')
-    .select('id, routines!inner(user_id, tenant_id)')
+    .select('user_id, tenant_id')
     .eq('id', routineDayId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return false;
-  // @ts-expect-error joined shape
-  const r = data.routines;
-  return !!r && r.user_id === ctx.userId && r.tenant_id === ctx.tenantId;
+  return data.user_id === ctx.userId && data.tenant_id === ctx.tenantId;
 }
 
 async function executeUpdateRoutineDay(ctx: AuthCtx, input: any) {
@@ -414,6 +417,8 @@ async function executeAddExercise(ctx: AuthCtx, input: any) {
 
   const { error } = await supabaseAdmin.from('routine_exercises').insert({
     routine_day_id: input.routine_day_id,
+    user_id: ctx.userId,
+    tenant_id: ctx.tenantId,
     exercise_name: input.exercise.exercise_name,
     sets: input.exercise.sets,
     reps: input.exercise.reps,

@@ -1,13 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, Text, View } from 'react-native';
 
 import type { RoutineDay } from '../../modules/routine/types';
 import { StreakBadge } from './StreakBadge';
 
 interface RoutineHeaderProps {
   selectedDay: RoutineDay | null;
-  onPressCalendar: () => void;
   /** Active routine name shown as the header title (replaces the static label
    *  when present so the user always sees which routine they're viewing). */
   activeRoutineName?: string | null;
@@ -18,7 +16,6 @@ interface RoutineHeaderProps {
 }
 
 export function RoutineHeader({
-  onPressCalendar,
   activeRoutineName,
   streakDays,
   onPressStreak,
@@ -36,23 +33,16 @@ export function RoutineHeader({
       {typeof streakDays === 'number' && (
         <StreakBadge daysTrained={streakDays} onPress={onPressStreak} />
       )}
-      <Pressable
-        onPress={onPressCalendar}
-        accessibilityRole="button"
-        accessibilityLabel="Abrir calendario"
-        style={({ pressed }) => [styles.calBtn, { opacity: pressed ? 0.6 : 1 }]}
-      >
-        <Ionicons name="calendar-outline" size={22} color="#fff" />
-      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
+    backgroundColor: '#0F0F0F',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
+    paddingTop: 10,
+    paddingBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -70,13 +60,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     marginTop: 2,
-  },
-  calBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#1a1a1a',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
