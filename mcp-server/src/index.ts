@@ -130,14 +130,21 @@ async function resolveUserId(explicit?: string): Promise<{ id: string } | { erro
 
 // -------------------------------------------------------------------------
 // MCP server + tools.
+//
+// Factory: returns a *fresh* McpServer with all tools registered. The HTTP
+// transport in stateless mode requires one server instance per request
+// (the SDK throws "Already connected to a transport" if the same server
+// is reconnected to a new transport), so we call this from every request
+// handler. stdio mode calls it once at startup.
 // -------------------------------------------------------------------------
 
+const txt = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
+
+export function createMcpServer(): McpServer {
 const server = new McpServer({
   name: 'gohan-ai',
   version: '1.0.0',
 });
-
-const txt = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
 // Type-erased wrapper around `server.tool`. The MCP SDK's overloaded
 // signature combined with zod schema inference per-handler produces a
@@ -465,6 +472,9 @@ tool(
   }
 );
 
+  return server;
+}
+
 // -------------------------------------------------------------------------
 // API-key auth (HTTP transport).
 // -------------------------------------------------------------------------
@@ -572,10 +582,13 @@ export async function runHttp(opts?: { port?: number }): Promise<{ close: () => 
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
       });
-      // Tear down the transport after the response cycle so we don't leak
-      // event listeners on the long-lived McpServer.
+      // Stateless: one server + one transport per request. Both get closed
+      // when the response ends. Reusing a single McpServer across requests
+      // throws "Already connected to a transport" on the second connect.
+      const server = createMcpServer();
       res.on('close', () => {
         transport.close().catch(() => {});
+        server.close().catch(() => {});
       });
       await server.connect(transport);
 
@@ -615,6 +628,7 @@ export async function runHttp(opts?: { port?: number }): Promise<{ close: () => 
 
 async function runStdio() {
   const transport = new StdioServerTransport();
+  const server = createMcpServer();
   await server.connect(transport);
   console.error('[mcp] stdio transport ready');
 }
