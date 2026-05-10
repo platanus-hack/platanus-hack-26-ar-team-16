@@ -1,9 +1,15 @@
 import type { FitnessLevel, UserProfile } from '../types';
 import type { Database } from '../types/database';
 import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type ProfileRow = Database['public']['Tables']['profiles']['Row'];
 type ProfileUpdate = Database['public']['Tables']['profiles']['Update'];
+
+type Db = SupabaseClient<Database>;
+function db(client?: Db): Db {
+  return client ?? (supabase as Db);
+}
 
 function rowToProfile(row: ProfileRow): UserProfile {
   return {
@@ -21,8 +27,11 @@ function rowToProfile(row: ProfileRow): UserProfile {
   };
 }
 
-export async function getProfile(userId: string): Promise<UserProfile | null> {
-  const { data, error } = await supabase
+export async function getProfile(
+  userId: string,
+  client?: Db,
+): Promise<UserProfile | null> {
+  const { data, error } = await db(client)
     .from('profiles')
     .select('*')
     .eq('id', userId)
@@ -34,7 +43,8 @@ export async function getProfile(userId: string): Promise<UserProfile | null> {
 
 export async function updateProfile(
   userId: string,
-  data: Partial<UserProfile>
+  data: Partial<UserProfile>,
+  client?: Db,
 ): Promise<void> {
   const updates: ProfileUpdate = {};
   if (data.displayName !== undefined) updates.display_name = data.displayName;
@@ -52,10 +62,13 @@ export async function updateProfile(
 
   if (Object.keys(updates).length === 0) return;
 
-  const { error } = await supabase.from('profiles').update(updates).eq('id', userId);
+  const { error } = await db(client).from('profiles').update(updates).eq('id', userId);
   if (error) throw error;
 }
 
-export async function markOnboardingCompleted(userId: string): Promise<void> {
-  await updateProfile(userId, { onboardingCompleted: true });
+export async function markOnboardingCompleted(
+  userId: string,
+  client?: Db,
+): Promise<void> {
+  await updateProfile(userId, { onboardingCompleted: true }, client);
 }

@@ -1,5 +1,12 @@
 import type { ChatMessage, Conversation, MessageRole } from '../types';
+import type { Database } from '../types/database';
 import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+type Db = SupabaseClient<Database>;
+function db(client?: Db): Db {
+  return client ?? (supabase as Db);
+}
 
 interface ConversationRow {
   id: string;
@@ -35,8 +42,12 @@ function rowToMessage(row: MessageRow): ChatMessage {
   };
 }
 
-export async function getOrCreateConversation(userId: string): Promise<Conversation> {
-  const { data: existing, error: selectErr } = await supabase
+export async function getOrCreateConversation(
+  userId: string,
+  client?: Db,
+): Promise<Conversation> {
+  const c = db(client);
+  const { data: existing, error: selectErr } = await c
     .from('conversations')
     .select('*')
     .eq('user_id', userId)
@@ -47,7 +58,7 @@ export async function getOrCreateConversation(userId: string): Promise<Conversat
   if (selectErr) throw selectErr;
   if (existing) return rowToConversation(existing as ConversationRow);
 
-  const { data: created, error: insertErr } = await supabase
+  const { data: created, error: insertErr } = await c
     .from('conversations')
     .insert({ user_id: userId })
     .select('*')
@@ -57,8 +68,11 @@ export async function getOrCreateConversation(userId: string): Promise<Conversat
   return rowToConversation(created as ConversationRow);
 }
 
-export async function createConversation(userId: string): Promise<Conversation> {
-  const { data, error } = await supabase
+export async function createConversation(
+  userId: string,
+  client?: Db,
+): Promise<Conversation> {
+  const { data, error } = await db(client)
     .from('conversations')
     .insert({ user_id: userId })
     .select('*')
@@ -68,8 +82,11 @@ export async function createConversation(userId: string): Promise<Conversation> 
   return rowToConversation(data as ConversationRow);
 }
 
-export async function getMessages(conversationId: string): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
+export async function getMessages(
+  conversationId: string,
+  client?: Db,
+): Promise<ChatMessage[]> {
+  const { data, error } = await db(client)
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
@@ -80,9 +97,10 @@ export async function getMessages(conversationId: string): Promise<ChatMessage[]
 }
 
 export async function saveMessage(
-  message: Omit<ChatMessage, 'id' | 'createdAt'>
+  message: Omit<ChatMessage, 'id' | 'createdAt'>,
+  client?: Db,
 ): Promise<ChatMessage> {
-  const { data, error } = await supabase
+  const { data, error } = await db(client)
     .from('messages')
     .insert({
       conversation_id: message.conversationId,
@@ -101,12 +119,13 @@ export async function uploadAudioMessage(
   userId: string,
   conversationId: string,
   audio: Blob | ArrayBuffer | Uint8Array,
-  contentType = 'audio/m4a'
+  contentType = 'audio/m4a',
+  client?: Db,
 ): Promise<string> {
   const ext = contentType.split('/')[1] ?? 'm4a';
   const path = `${userId}/${conversationId}/${Date.now()}.${ext}`;
 
-  const { error } = await supabase.storage
+  const { error } = await db(client).storage
     .from('chat-audio')
     .upload(path, audio as Blob, { contentType, upsert: false });
 
@@ -114,8 +133,12 @@ export async function uploadAudioMessage(
   return path;
 }
 
-export async function getAudioSignedUrl(path: string, expiresInSec = 60 * 60): Promise<string> {
-  const { data, error } = await supabase.storage
+export async function getAudioSignedUrl(
+  path: string,
+  expiresInSec = 60 * 60,
+  client?: Db,
+): Promise<string> {
+  const { data, error } = await db(client).storage
     .from('chat-audio')
     .createSignedUrl(path, expiresInSec);
 
