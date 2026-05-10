@@ -157,17 +157,36 @@ Deno.serve(async (req: Request) => {
       gohanSecret
     );
 
-    // 5. Realtime JWT — TODO (Phase 2 / §10.4):
-    //    Supabase doesn't expose a documented service-role API to mint a
-    //    user-scoped access token. The clean path is one of:
-    //      (a) sign a Supabase-compatible JWT using the project's JWT secret
-    //          (Deno.env.get('SUPABASE_JWT_SECRET')) with role='authenticated'
-    //          and sub=auth_user_id. This requires the gym-origin profile to
-    //          be linked to an auth.users row (FK relaxation work above).
-    //      (b) proxy realtime through a Gohan-hosted websocket gateway.
-    //    For now we return only session_token. Realtime subscription from
-    //    the embedded module is a Phase-2 deliverable.
-    const realtimeJwt: string | undefined = undefined;
+    // 5. Realtime JWT (§10.4) — sign a Supabase-compatible HS256 JWT with the
+    //    project's JWT secret. Realtime accepts any JWT signed with
+    //    SUPABASE_JWT_SECRET and uses the `sub` claim as the user identity for
+    //    RLS evaluation (auth.uid()). For gym-origin profiles, profiles.id is
+    //    a freshly-generated UUID (post FK-relaxation, migration 005), which
+    //    is what we use as `sub` so RLS policies of the form
+    //    `auth.uid() = user_id` line up with the routines this user owns.
+    //    If the secret env is missing we degrade gracefully — embedded users
+    //    still get a session token; only realtime subscriptions go dark.
+    let realtimeJwt: string | null = null;
+    const supabaseJwtSecret = Deno.env.get('SUPABASE_JWT_SECRET');
+    if (supabaseJwtSecret) {
+      try {
+        realtimeJwt = await signHs256(
+          {
+            sub: userId,
+            role: 'authenticated',
+            aud: 'authenticated',
+            iat: now,
+            exp: now + SESSION_TTL_SECONDS,
+          },
+          supabaseJwtSecret
+        );
+      } catch (e) {
+        console.warn('[api-session] failed to mint realtime_jwt', e);
+        realtimeJwt = null;
+      }
+    } else {
+      console.warn('[api-session] SUPABASE_JWT_SECRET not set — realtime_jwt unavailable');
+    }
 
     return new Response(
       JSON.stringify({
