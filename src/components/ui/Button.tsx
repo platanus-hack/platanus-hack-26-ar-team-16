@@ -14,6 +14,7 @@ interface ButtonProps {
   loading?: boolean;
   icon?: ReactNode;
   fullWidth?: boolean;
+  backgroundColor?: string;
 }
 
 const sizePadding: Record<Size, string> = {
@@ -37,16 +38,18 @@ export function Button({
   loading = false,
   icon,
   fullWidth = false,
+  backgroundColor,
 }: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
 
   const bgColor =
-    variant === 'primary'
+    backgroundColor ??
+    (variant === 'primary'
       ? theme.primary
       : variant === 'secondary'
         ? '#EEF2FF'
-        : 'transparent';
+        : 'transparent');
 
   const textColor =
     variant === 'primary' ? '#FFFFFF' : theme.primary;

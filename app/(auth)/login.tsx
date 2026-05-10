@@ -110,6 +110,7 @@ export default function LoginScreen() {
               onPress={handleLogin}
               loading={loading}
               fullWidth
+              backgroundColor="#FF6B00"
             />
             <Button
               label="Continuar con Google"

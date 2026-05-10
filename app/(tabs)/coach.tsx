@@ -34,16 +34,13 @@ export default function CoachScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      <View className="flex-row items-center justify-between px-4 py-3 border-b border-slate-100">
-        <View className="flex-row items-center gap-2">
-          <View
-            className="w-8 h-8 rounded-full items-center justify-center"
-            style={{ backgroundColor: theme.primary }}
-          >
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }} edges={['top', 'bottom']}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1A1A1A' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.primary }}>
             <Ionicons name="fitness" size={16} color="#FFFFFF" />
           </View>
-          <Text className="text-lg font-bold text-slate-900">Gohan</Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF' }}>Gohan</Text>
         </View>
         <CoachStylePicker />
       </View>

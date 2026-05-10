@@ -46,10 +46,6 @@ const TAB_LABELS = {
 type TabName = keyof typeof TAB_ICONS;
 
 function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const qrRoute = state.routes.find((r) => r.name === 'qr');
-  const qrIndex = state.routes.findIndex((r) => r.name === 'qr');
-  const qrFocused = state.index === qrIndex;
-
   const onTabPress = (routeName: string, key: string, isFocused: boolean) => {
     const event = navigation.emit({ type: 'tabPress', target: key, canPreventDefault: true });
     if (!isFocused && !event.defaultPrevented) navigation.navigate(routeName as never);
@@ -71,8 +67,6 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         const isFocused = state.index === idx;
         const isQr = route.name === 'qr';
 
-        if (isQr) return <View key={route.key} style={{ flex: 1 }} />;
-
         const iconName = TAB_ICONS[route.name as TabName] ?? 'help-circle-outline';
         const label = TAB_LABELS[route.name as TabName] ?? (descriptors[route.key]?.options.title ?? '');
 
@@ -83,7 +77,13 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             accessibilityRole="button"
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={label}
-            style={{ flex: 1, alignItems: 'center', paddingTop: 8 }}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingTop: 8,
+              // @ts-expect-error web-only: suppress browser default focus ring
+              outline: 'none',
+            }}
           >
             {isFocused ? (
               <View
@@ -100,7 +100,7 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             <MaterialCommunityIcons
               name={iconName as any}
               size={22}
-              color={isFocused ? MT.textActive : MT.textIdle}
+              color={isQr ? MT.brand : isFocused ? MT.textActive : MT.textIdle}
             />
             <Text
               style={{
@@ -108,7 +108,7 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 fontWeight: '500',
                 letterSpacing: 0.6,
                 marginTop: 4,
-                color: isFocused ? MT.textActive : MT.textIdle,
+                color: isQr ? MT.brand : isFocused ? MT.textActive : MT.textIdle,
               }}
             >
               {label}
@@ -116,30 +116,6 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
           </Pressable>
         );
       })}
-
-      {qrRoute ? (
-        <Pressable
-          onPress={() => onTabPress('qr', qrRoute.key, qrFocused)}
-          accessibilityRole="button"
-          accessibilityLabel="Acceder con QR"
-          style={{
-            position: 'absolute',
-            top: -22,
-            left: '50%',
-            marginLeft: -28,
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: MT.fabBg,
-            borderWidth: 3,
-            borderColor: MT.brand,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <MaterialCommunityIcons name="qrcode-scan" size={26} color={MT.brand} />
-        </Pressable>
-      ) : null}
     </View>
   );
 }
