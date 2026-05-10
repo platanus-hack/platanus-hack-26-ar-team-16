@@ -57,6 +57,7 @@ The `ai-chat` streaming endpoint emits `data: {...}\n\n` events terminated by `d
 - `{type: "text", content: "<delta>"}` — token chunk for the visible reply
 - `{type: "tool_start", content: "<toolName>", toolName: "<toolName>"}` — Claude is about to invoke a tool
 - `{type: "tool_end", content: "<toolName>", toolName: "<toolName>", toolSuccess: boolean}` — DB write finished
+- `{type: "sources", sources: [{id, title, authors, year, url, claim_short}]}` — emitted after `cite_sources` tool; client renders citation pills on the active assistant message
 - `{type: "error", content: "<msg>"}` — only on failure
 
 Pass header `x-no-stream: true` to get the full JSON `{content, toolCalls, routineModified}` instead.

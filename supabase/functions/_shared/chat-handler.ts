@@ -16,6 +16,7 @@ import {
   SCOPE_RULES,
   TOOL_RULES,
   UI_RULES,
+  CITATION_RULES,
   ONBOARDING_MODE,
 } from './coach-instructions.ts';
 
@@ -183,6 +184,30 @@ export const TOOLS: Anthropic.Tool[] = [
         new_name: { type: 'string' },
       },
       required: ['routine_id', 'new_name'],
+    },
+  },
+  {
+    name: 'cite_sources',
+    description:
+      'Devolvé fuentes científicas para respaldar un claim del coach. Llamalo SOLO cuando el usuario pida explícitamente la fuente, o cuando estés haciendo un claim que requiere respaldo (ej: rangos de reps, dosis de proteína, tiempos de recovery, efectividad de suplementos). Si no hay fuente apropiada en la DB, NO inventes — devolvé array vacío.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Claim corto a respaldar, en español. Ej: "rango de repeticiones para hipertrofia"',
+        },
+        category: {
+          type: 'string',
+          enum: ['training', 'nutrition', 'recovery', 'injury', 'supplements', 'mental'],
+        },
+        max_results: {
+          type: 'integer',
+          default: 3,
+          maximum: 5,
+        },
+      },
+      required: ['query', 'category'],
     },
   },
   {
@@ -490,6 +515,33 @@ async function executeDeleteRoutine(ctx: AuthCtx, input: any) {
   return { success: true };
 }
 
+async function executeCiteSources(input: any) {
+  const maxResults = Math.min(input.max_results ?? 3, 5);
+  const query: string = input.query ?? '';
+  const category: string = input.category;
+
+  // Primary: filter by category + ILIKE on claim_short
+  const { data: primary } = await supabaseAdmin
+    .from('sources')
+    .select('id, title, authors, year, url, claim_short')
+    .eq('category', category)
+    .ilike('claim_short', `%${query.split(' ').slice(0, 3).join('%')}%`)
+    .limit(maxResults);
+
+  if (primary && primary.length > 0) {
+    return { success: true, sources: primary };
+  }
+
+  // Fallback: return top sources in the category regardless of query
+  const { data: fallback } = await supabaseAdmin
+    .from('sources')
+    .select('id, title, authors, year, url, claim_short')
+    .eq('category', category)
+    .limit(maxResults);
+
+  return { success: true, sources: fallback ?? [] };
+}
+
 async function executeTool(ctx: AuthCtx, toolName: string, input: any) {
   switch (toolName) {
     case 'create_routine':
@@ -510,6 +562,8 @@ async function executeTool(ctx: AuthCtx, toolName: string, input: any) {
       return executeRenameRoutine(ctx, input);
     case 'delete_routine':
       return executeDeleteRoutine(ctx, input);
+    case 'cite_sources':
+      return executeCiteSources(input);
     default:
       return { success: false, error: `Unknown tool: ${toolName}` };
   }
@@ -546,6 +600,8 @@ ${FORMAT_RULES}
 ${SCOPE_RULES}
 
 ${TOOL_RULES}
+
+${CITATION_RULES}
 
 ${UI_RULES}
 ${getTemporalContext()}${profileBlock}${onboardingBlock}`;
@@ -706,6 +762,11 @@ export async function streamChat(
             toolName: currentToolName,
             toolSuccess: result.success,
           });
+
+          // Emit sources to the client so the UI can render citation pills
+          if (currentToolName === 'cite_sources' && result.sources?.length) {
+            send({ type: 'sources', sources: result.sources });
+          }
 
           toolUseBlocks.push({
             id: currentToolId,

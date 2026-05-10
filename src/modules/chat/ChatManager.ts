@@ -132,6 +132,9 @@ export async function sendUserMessage(
       onToolStart: (toolName) => {
         useChatStore.getState().setActiveTool(toolName);
       },
+      onSources: (sources) => {
+        useChatStore.getState().updateMessageSources(assistantId, sources);
+      },
       onToolEnd: (toolName, success) => {
         useChatStore.getState().setActiveTool(null);
         if (success) {
