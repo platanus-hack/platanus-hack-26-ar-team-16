@@ -28,7 +28,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
@@ -36,9 +36,14 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 // Supabase client (service role — auth is done at the API-key layer above).
 // -------------------------------------------------------------------------
 
-let _supabase: SupabaseClient | null = null;
+let _supabase: any = null;
 
-function getSupabase(): SupabaseClient {
+// Returns the supabase client typed as `any`. Without this, supabase-js's
+// PostgrestQueryBuilder generics combine with nested `.select(\`...\`)` template
+// strings across ~10 tool handlers and blow up tsc with TS2589 (excessively
+// deep instantiation) — 20M+ type instantiations, ~5GB heap. Runtime is
+// unaffected; we only lose query-shape typing inside this file.
+function getSupabase(): any {
   if (!_supabase) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -46,6 +51,16 @@ function getSupabase(): SupabaseClient {
     _supabase = createClient(url, key);
   }
   return _supabase;
+}
+
+/**
+ * Test-only seam: inject a fake supabase client. The HTTP transport and
+ * every tool handler in this file routes through `getSupabase()`, so this
+ * lets the integration test substitute a mock at the boundary without
+ * needing a live database connection.
+ */
+export function __setSupabaseForTest(client: unknown): void {
+  _supabase = client;
 }
 
 // -------------------------------------------------------------------------
@@ -124,7 +139,21 @@ const server = new McpServer({
 
 const txt = (s: string) => ({ content: [{ type: 'text' as const, text: s }] });
 
-server.tool(
+// Type-erased wrapper around `server.tool`. The MCP SDK's overloaded
+// signature combined with zod schema inference per-handler produces a
+// quadratic-feeling type-check (~20M instantiations, ~5GB heap) across
+// 10 tools in this file. Schemas are still validated at runtime by the
+// SDK; we only drop compile-time inference of handler arg shapes.
+const tool = (
+  name: string,
+  description: string,
+  schema: Record<string, unknown>,
+  handler: (args: any) => any
+): void => {
+  (server as any).tool(name, description, schema, handler);
+};
+
+tool(
   'get_user_routine',
   'Get the active routine for a user, including all days and exercises. Provide user_id OR rely on X-External-Id header.',
   {
@@ -156,7 +185,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'list_exercises_for_day',
   'List all exercises for a specific day of the week in the active routine',
   {
@@ -228,7 +257,7 @@ async function routineDayBelongsToTenant(routineDayId: string): Promise<boolean>
   return tid === c.tenantId;
 }
 
-server.tool(
+tool(
   'update_exercise',
   'Update an exercise in the routine (sets, reps, weight, notes)',
   {
@@ -258,7 +287,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'add_exercise',
   'Add a new exercise to a specific day in the routine',
   {
@@ -293,7 +322,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'remove_exercise',
   'Remove an exercise from a routine day',
   {
@@ -313,7 +342,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'replace_exercise',
   'Replace an exercise with a new one, keeping the same position and day',
   {
@@ -358,7 +387,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'get_user_profile',
   'Get a user profile including fitness level, injuries, equipment, and goals',
   {
@@ -377,7 +406,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'get_tenant_info',
   'Get branding and config for the current tenant (colors, logo, name). Scoped to the API key tenant — tenant_slug arg is ignored when called via HTTP.',
   {
@@ -403,7 +432,7 @@ server.tool(
   }
 );
 
-server.tool(
+tool(
   'list_tenant_users',
   'List all users that belong to the current tenant',
   {
@@ -496,17 +525,15 @@ async function readBody(req: IncomingMessage): Promise<unknown | undefined> {
   });
 }
 
-async function runHttp() {
-  const port = Number(process.env.PORT ?? 3000);
+export async function runHttp(opts?: { port?: number }): Promise<{ close: () => Promise<void>; port: number }> {
+  const port = opts?.port ?? Number(process.env.PORT ?? 3000);
 
-  // Stateless mode — each HTTP request stands alone, authenticated by its
-  // own Authorization header. No session continuation across requests.
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-  });
-
-  await server.connect(transport);
-
+  // Stateless mode (per the SDK contract) requires a *fresh* transport per
+  // request — reusing a stateless transport throws
+  // "Stateless transport cannot be reused across requests" on the second
+  // call. So we connect a new transport instance inside each request
+  // handler. The `McpServer` itself is shared and just maps the transport's
+  // protocol layer to our tool registry.
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     try {
       const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -542,6 +569,16 @@ async function runHttp() {
         parsedBody = await readBody(req);
       }
 
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      // Tear down the transport after the response cycle so we don't leak
+      // event listeners on the long-lived McpServer.
+      res.on('close', () => {
+        transport.close().catch(() => {});
+      });
+      await server.connect(transport);
+
       await ctxStorage.run(requestCtx, async () => {
         await transport.handleRequest(req, res, parsedBody);
       });
@@ -555,9 +592,25 @@ async function runHttp() {
     }
   });
 
-  httpServer.listen(port, () => {
-    console.log(`[mcp] HTTP transport listening on http://0.0.0.0:${port}/mcp`);
+  await new Promise<void>((resolve) => {
+    httpServer.listen(port, () => {
+      console.log(`[mcp] HTTP transport listening on http://0.0.0.0:${port}/mcp`);
+      resolve();
+    });
   });
+
+  const actualPort =
+    typeof httpServer.address() === 'object' && httpServer.address()
+      ? (httpServer.address() as { port: number }).port
+      : port;
+
+  return {
+    port: actualPort,
+    close: () =>
+      new Promise<void>((resolve, reject) => {
+        httpServer.close((err) => (err ? reject(err) : resolve()));
+      }),
+  };
 }
 
 async function runStdio() {
@@ -572,7 +625,11 @@ async function main() {
   else await runHttp();
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// Only auto-run when executed as a script (node dist/index.js), not when
+// imported by tests (`require('../src/index.ts')`).
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
+}
