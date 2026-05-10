@@ -46,3 +46,6 @@ npm-debug.*
 *.key
 *.mobileprovision
 *.orig.*
+
+# Vercel CLI link metadata (project tokens)
+.vercel
