@@ -1,5 +1,21 @@
 export type TenantId = 'default' | 'smartfit' | 'megatlon';
 
+export interface TenantImages {
+  logoUrl: string | null;
+  loginHero: string | null;
+}
+
+export interface TenantClassNames {
+  /** Tailwind classes for the page-level background (works with NativeWind on web + native). */
+  pageBg: string;
+  /** Tailwind classes for an elevated card/surface. */
+  surface: string;
+  /** Default text color class for primary copy. */
+  text: string;
+  /** Tailwind class for muted/secondary copy. */
+  textMuted: string;
+}
+
 export interface TenantTheme {
   id: TenantId;
   name: string;
@@ -22,6 +38,8 @@ export interface TenantTheme {
     danger: string;
     info: string;
   };
+  classNames: TenantClassNames;
+  images: TenantImages;
   heroGradient: [string, string];
   fontFamily: {
     sans: string;

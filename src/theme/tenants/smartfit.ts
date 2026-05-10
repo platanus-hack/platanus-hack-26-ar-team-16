@@ -1,21 +1,8 @@
-/**
- * Megatlon tenant — first concrete demo case for the hackathon.
- *
- * Brand identity (extracted from the live app, May 2026):
- *   - Pure black background, very dark gray surfaces
- *   - Aggressive orange accent (#FF6B00) for CTAs and the QR FAB ring
- *   - Geometric sans-serif, mostly bold, frequently uppercase
- *
- * The brand orange matches smartfit (#FF6B00). Tokens are kept duplicated
- * rather than aliased so future divergence between the two brands doesn't
- * accidentally couple them.
- */
-
 import type { TenantTheme } from '../tokens';
 
-export const megatlonTenant: TenantTheme = {
-  id: 'megatlon',
-  name: 'Megatlon',
+export const smartfitTenant: TenantTheme = {
+  id: 'smartfit',
+  name: 'SmartFit Demo',
   signature: '#FF6B00',
   colors: {
     primary: '#FF6B00',
