@@ -495,7 +495,7 @@ Deno.serve(async (req: Request) => {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-no-stream',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-no-stream, cache-control',
       },
     });
   }
@@ -507,7 +507,7 @@ Deno.serve(async (req: Request) => {
     if (!userId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
 
@@ -534,7 +534,7 @@ Deno.serve(async (req: Request) => {
         userId
       );
       return new Response(JSON.stringify(response), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
       });
     }
 
@@ -572,7 +572,7 @@ Deno.serve(async (req: Request) => {
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
     });
   }
 });

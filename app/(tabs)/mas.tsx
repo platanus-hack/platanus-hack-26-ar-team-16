@@ -6,12 +6,12 @@
  */
 
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-// ASSUMPTION: useAuthStore at this path, s.user.displayName. Fix here if differs.
 import { useAuthStore } from '../../src/store/useAuthStore';
+import { useOpenWearables } from '../../src/hooks/useOpenWearables';
 
 const ROWS = [
   { id: 'reservas', label: 'RESERVAS', icon: 'calendar-blank-outline', section: 'top' },
@@ -25,7 +25,23 @@ const ROWS = [
   { id: 'ayuda', label: 'AYUDA', icon: 'whatsapp', section: 'top' },
 ] as const;
 
-function ConectarRelojModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function ConectarRelojModal({
+  visible,
+  onClose,
+  connected,
+  syncing,
+  loading,
+  onConnect,
+  onSync,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  connected: boolean;
+  syncing: boolean;
+  loading: boolean;
+  onConnect: () => void;
+  onSync: () => void;
+}) {
   return (
     <Modal
       visible={visible}
@@ -44,34 +60,75 @@ function ConectarRelojModal({ visible, onClose }: { visible: boolean; onClose: (
 
               <View style={{
                 width: 72, height: 72, borderRadius: 20,
-                backgroundColor: '#1A1A1A', alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+                backgroundColor: connected ? '#1a2e1a' : '#1A1A1A',
+                alignItems: 'center', justifyContent: 'center', marginBottom: 16,
               }}>
-                <MaterialCommunityIcons name="watch-variant" size={36} color="#FF6B00" />
+                <MaterialCommunityIcons
+                  name={connected ? 'watch-variant' : 'watch-variant'}
+                  size={36}
+                  color={connected ? '#4ADE80' : '#FF6B00'}
+                />
               </View>
 
               <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 0.4, marginBottom: 8 }}>
-                Conectar Reloj
+                {connected ? 'Reloj Conectado' : 'Conectar Reloj'}
               </Text>
-              <Text style={{ color: '#888888', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 32 }}>
-                Sincronizá tu smartwatch para registrar tus entrenamientos automáticamente.
+              <Text style={{ color: '#888888', fontSize: 13, textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+                {connected
+                  ? 'Tu smartwatch está sincronizando datos de salud con Gohan AI.'
+                  : 'Sincronizá tu smartwatch para registrar tus entrenamientos automáticamente.'}
               </Text>
 
-              <Pressable
-                onPress={() => {}}
-                style={({ pressed }) => ({
-                  width: '100%',
-                  height: 52,
-                  borderRadius: 14,
-                  backgroundColor: '#FF6B00',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: pressed ? 0.85 : 1,
-                })}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 }}>
-                  Conectar
-                </Text>
-              </Pressable>
+              {connected && (
+                <View style={{
+                  width: '100%', flexDirection: 'row', alignItems: 'center',
+                  justifyContent: 'space-between', paddingVertical: 14, paddingHorizontal: 16,
+                  backgroundColor: '#1A1A1A', borderRadius: 12, marginBottom: 16,
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: syncing ? '#4ADE80' : '#666' }} />
+                    <Text style={{ color: '#FFFFFF', fontSize: 14 }}>
+                      {syncing ? 'Sincronizando...' : 'Sync pausado'}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons name="sync" size={18} color="#888" />
+                </View>
+              )}
+
+              {connected ? (
+                <Pressable
+                  onPress={onSync}
+                  style={({ pressed }) => ({
+                    width: '100%', height: 52, borderRadius: 14,
+                    backgroundColor: '#1A1A1A', borderWidth: 1, borderColor: '#333',
+                    alignItems: 'center', justifyContent: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 }}>
+                    Sincronizar ahora
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={onConnect}
+                  disabled={loading}
+                  style={({ pressed }) => ({
+                    width: '100%', height: 52, borderRadius: 14,
+                    backgroundColor: '#FF6B00',
+                    alignItems: 'center', justifyContent: 'center',
+                    opacity: loading ? 0.6 : pressed ? 0.85 : 1,
+                  })}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '700', letterSpacing: 0.5 }}>
+                      Conectar
+                    </Text>
+                  )}
+                </Pressable>
+              )}
             </View>
           </SafeAreaView>
         </Pressable>
@@ -82,8 +139,8 @@ function ConectarRelojModal({ visible, onClose }: { visible: boolean; onClose: (
 
 export default function MasScreen() {
   const [watchModalVisible, setWatchModalVisible] = useState(false);
+  const { connected, syncing, loading, connect, forceSync } = useOpenWearables();
 
-  // UserProfile.displayName is the real field name per src/types/user.ts
   const userName = useAuthStore((s: any) => s.user?.displayName ?? null);
   const displayName = (userName ?? 'Tomás Calligaris').toUpperCase();
 
@@ -128,16 +185,16 @@ export default function MasScreen() {
               >
                 <Text
                   style={{
-                    color: isWatch ? '#FF6B00' : isSubRow ? '#B8B8B8' : '#FFFFFF',
+                    color: isWatch ? (connected ? '#4ADE80' : '#FF6B00') : isSubRow ? '#B8B8B8' : '#FFFFFF',
                     fontSize: isSubRow ? 14 : 15,
                     fontWeight: isSubRow ? '400' : '600',
                     letterSpacing: isSubRow ? 0 : 1.2,
                   }}
                 >
-                  {row.label}
+                  {isWatch && connected ? 'Reloj Conectado' : row.label}
                 </Text>
                 {isWatch ? (
-                  <MaterialCommunityIcons name="watch-variant" size={18} color="#FF6B00" />
+                  <MaterialCommunityIcons name="watch-variant" size={18} color={connected ? '#4ADE80' : '#FF6B00'} />
                 ) : row.icon ? (
                   <MaterialCommunityIcons name={row.icon as any} size={20} color="#FFFFFF" />
                 ) : null}
@@ -172,6 +229,11 @@ export default function MasScreen() {
       <ConectarRelojModal
         visible={watchModalVisible}
         onClose={() => setWatchModalVisible(false)}
+        connected={connected}
+        syncing={syncing}
+        loading={loading}
+        onConnect={connect}
+        onSync={forceSync}
       />
     </SafeAreaView>
   );
