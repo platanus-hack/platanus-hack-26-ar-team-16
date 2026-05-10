@@ -126,7 +126,7 @@ export function ScrollPhone() {
         className="phone-track relative h-[260vh] md:h-[280vh]"
       >
         <div
-          className={`sticky top-0 h-screen flex items-center justify-center overflow-hidden ${
+          className={`sticky top-0 h-screen md:pt-14 flex items-center justify-center overflow-hidden ${
             interactive ? "iframe-locked" : ""
           }`}
         >
@@ -224,25 +224,34 @@ export function ScrollPhone() {
             </div>
           </div>
 
+          {/* QR to open the live demo on a phone — desktop only.
+              Sits opposite the side captions so the locked iPhone frame
+              has a card on each flank. */}
+          <DemoQr />
+
           {/* Editorial side captions — desktop only */}
-          <SideCaptions progress={progress} />
+          <SideCaptions progress={progress} isMobile={isMobile} />
         </div>
       </div>
     </section>
   );
 }
 
-function SideCaptions({ progress }: { progress: number }) {
+function SideCaptions({ progress, isMobile }: { progress: number; isMobile: boolean }) {
   const captions = [
     { at: 0.1, label: "Auto sign-in", text: "Demo account loads. No login form to fill in." },
     { at: 0.35, label: "Home dashboard", text: "Today's workout, weekly streak, branded by tenant." },
     { at: 0.6, label: "Routine view", text: "Day-by-day breakdown. Updates in real time." },
     { at: 0.85, label: "Coach chat", text: "Ask. Watch the routine rewrite itself." },
   ];
-  // Fade the whole group out as the phone approaches full bleed (scale > 0.95
-  // happens around progress 0.63). By 0.62 they're fully gone so they never
-  // sit on top of the live iframe.
-  const groupOpacity = progress < 0.5 ? 1 : Math.max(0, 1 - (progress - 0.5) / 0.12);
+  // Mobile: fade out before the phone reaches full bleed so captions don't
+  // sit on top of the live iframe. Desktop: phone is locked to iPhone 13
+  // and never expands past the column, so we keep them up the whole time.
+  const groupOpacity = !isMobile
+    ? 1
+    : progress < 0.5
+      ? 1
+      : Math.max(0, 1 - (progress - 0.5) / 0.12);
   return (
     <div
       className="hidden md:block absolute right-6 lg:right-10 top-1/2 -translate-y-1/2 w-64 lg:w-72 space-y-6 transition-opacity duration-300"
@@ -272,6 +281,54 @@ function SideCaptions({ progress }: { progress: number }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function DemoQr() {
+  // Encoded as ink-on-paper so the QR scans well on any phone camera.
+  // We hit qrserver.com because adding a runtime dep for one image
+  // isn't worth it — the URL is stable and the SVG response is tiny.
+  const target = APP_URL;
+  const params = new URLSearchParams({
+    size: "320x320",
+    data: target,
+    color: "0a0a0a", // ink
+    bgcolor: "f6f3ee", // paper
+    margin: "0",
+    qzone: "1",
+    format: "svg",
+  });
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
+  return (
+    <div className="hidden md:block absolute left-6 lg:left-10 top-1/2 -translate-y-1/2 w-44 lg:w-48">
+      <div className="eyebrow text-[var(--color-flame)] mb-3">
+        Try it on your phone
+      </div>
+      <div
+        className="relative bg-[var(--color-paper)] rounded-2xl p-4 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.45),_0_10px_30px_-10px_rgba(0,0,0,0.25)]"
+        style={{
+          border: "1px solid color-mix(in srgb, var(--color-ink) 12%, transparent)",
+        }}
+      >
+        {/* Subtle flame corner tab — same accent the eyebrow uses, ties
+            the QR card visually to the brand without bleeding into the
+            QR pixels themselves. */}
+        <span
+          aria-hidden
+          className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[var(--color-flame)]"
+        />
+        <img
+          src={qrSrc}
+          alt="QR code linking to the live Gohan AI demo"
+          className="block w-full h-auto"
+          loading="lazy"
+        />
+      </div>
+      <p className="mt-3 text-[12px] text-[var(--color-mute)] leading-relaxed">
+        Same demo, in your hand. Camera + voice prompts work natively
+        from the browser.
+      </p>
     </div>
   );
 }
