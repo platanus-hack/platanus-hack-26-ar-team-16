@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
+import { toast } from '@/store';
 
 interface AudioRecorderResult {
   isRecording: boolean;
@@ -17,6 +18,7 @@ export function useAudioRecorder(): AudioRecorderResult {
       const perm = await Audio.requestPermissionsAsync();
       if (!perm.granted) {
         console.warn('[useAudioRecorder] microphone permission denied');
+        toast.warning('Permiso de micrófono denegado');
         return;
       }
       await Audio.setAudioModeAsync({
@@ -32,6 +34,7 @@ export function useAudioRecorder(): AudioRecorderResult {
       setIsRecording(true);
     } catch (err) {
       console.warn('[useAudioRecorder] start failed:', err);
+      toast.error('No se pudo iniciar la grabación');
       recordingRef.current = null;
       setIsRecording(false);
     }
@@ -47,6 +50,7 @@ export function useAudioRecorder(): AudioRecorderResult {
       return recording.getURI();
     } catch (err) {
       console.warn('[useAudioRecorder] stop failed:', err);
+      toast.error('No se pudo finalizar la grabación');
       return null;
     }
   }, []);
