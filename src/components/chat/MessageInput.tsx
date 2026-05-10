@@ -66,7 +66,6 @@ export function MessageInput({
           placeholder={isRecording ? '🎤 Escuchando...' : 'Escribí un mensaje'}
           placeholderTextColor={isRecording ? '#6366F1' : '#666666'}
           editable={!disabled && !isRecording}
-          multiline
           style={{ fontSize: 16, color: '#FFFFFF', maxHeight: 128 }}
           onSubmitEditing={handleSend}
         />
