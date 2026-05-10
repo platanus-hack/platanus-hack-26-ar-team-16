@@ -16,9 +16,9 @@ Living list of known shortcuts, deferred refactors, and security items that need
 **Origin:** commit `82d2750` (`feat: open wearables integration + CORS fix`), pre-auth-refactor.
 **Architecture ref:** `ARCHITECTURE.md` §14.
 
-**Problem.** The wearables client talks directly to a third-party Open Wearables backend (`OW_HOST`) using bundled admin credentials. Three properties of the current path are out of compliance with `ARCHITECTURE.md` §10–§11:
+**Problem.** The original wearables client talked directly to a third-party Open Wearables backend (`OW_HOST`) using bundled admin credentials. The current client path is disabled until `ow-bridge` exists, because these properties are out of compliance with `ARCHITECTURE.md` §10–§11:
 
-1. Admin email + password are string literals in `openWearables.ts` — shipped in the Hermes bundle and present in git history of `origin/main` since `82d2750`.
+1. Admin email + password were string literals in `openWearables.ts` — shipped in the Hermes bundle and present in git history of `origin/main` since `82d2750`.
 2. `ensureOWUser(email)` lets the client choose which OW user it operates as. There is no Gohan-side mapping table linking `profiles.id ↔ ow_user_id`; nothing prevents impersonation by passing a different `email`.
 3. The resolved `ow_user_id` lives in a module-level `let` that resets on cold start, forcing a re-auth round-trip every time.
 
@@ -40,9 +40,9 @@ Living list of known shortcuts, deferred refactors, and security items that need
 
 **Severity:** High (credential exposure)
 **Owner:** unassigned (whoever owns the OW backend operationally)
-**Surface:** the OW backend's `admin@admin.com` account.
+**Surface:** the OW backend admin account.
 
-**Problem.** The credential `GohanAdmin2026!` was committed in clear text in `src/services/openWearables.ts` (commit `82d2750`). It is in the git history of every clone of `origin/main`. Even after TD-1 removes the literal from the bundle, the historical commit remains discoverable.
+**Problem.** The OW admin credential was committed in clear text in `src/services/openWearables.ts` (commit `82d2750`). It is in the git history of every clone of `origin/main`. Even after TD-1 removes the literal from the bundle, the historical commit remains discoverable.
 
 **Definition of done.**
 - [ ] Rotate the admin password on the OW deployment.
