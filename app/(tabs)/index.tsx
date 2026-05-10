@@ -58,15 +58,11 @@ export default function InicioScreen() {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
           paddingHorizontal: 16,
           paddingVertical: 12,
         }}
       >
-        <View style={{ width: 24 }} />
-        <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '500', letterSpacing: 2 }}>
-          MEGATLON
-        </Text>
         <MaterialCommunityIcons name="bell-outline" size={22} color="#FFFFFF" />
       </View>
 
