@@ -55,7 +55,9 @@ body {
 
 .eyebrow {
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  /* Bumped from 0.7rem so labels read clearly on retina laptops without
+     tipping into "shouting" territory. */
+  font-size: 0.95rem;
   text-transform: uppercase;
   letter-spacing: 0.18em;
   font-weight: 500;

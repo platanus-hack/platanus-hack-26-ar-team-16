@@ -48,10 +48,10 @@ export function Outcomes() {
               <div className="display tabular text-6xl md:text-8xl lg:text-[8.5rem] mb-4 text-[var(--color-ink)] leading-none">
                 <NumberTicker value={s.v} to={s.to} format={s.format} />
               </div>
-              <div className="text-sm text-[var(--color-graphite)] leading-snug max-w-[200px] mb-2 font-medium">
+              <div className="text-base text-[var(--color-graphite)] leading-snug max-w-[220px] mb-2 font-medium">
                 {s.l}
               </div>
-              <div className="text-xs font-mono text-[var(--color-fade)] uppercase tracking-wider">
+              <div className="text-sm font-mono text-[var(--color-fade)] uppercase tracking-wider">
                 {s.note}
               </div>
             </Reveal>

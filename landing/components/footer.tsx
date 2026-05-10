@@ -50,7 +50,7 @@ export function Footer() {
           />
         </div>
       </div>
-      <div className="mx-auto max-w-[1440px] px-6 md:px-10 mt-16 pt-8 border-t border-[var(--color-paper)]/10 flex flex-col md:flex-row justify-between gap-4 text-xs text-[var(--color-paper)]/50">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-10 mt-16 pt-8 border-t border-[var(--color-paper)]/10 flex flex-col md:flex-row justify-between gap-4 text-sm text-[var(--color-paper)]/50">
         <div>© 2026 Gohan AI · team-16</div>
         <div className="font-mono tracking-[0.2em]">
           MAKE · YOUR · GYM · THINK
