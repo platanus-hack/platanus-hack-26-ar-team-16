@@ -203,13 +203,6 @@ export function pushAudioBubble(audioUrl: string): void {
   });
 }
 
-const ONBOARDING_INIT_CHIPS = [
-  '{"op":"add","path":"/root","value":"row"}',
-  '{"op":"add","path":"/elements/row","value":{"type":"Row","props":{"gap":8,"flexWrap":"wrap"},"children":["c1","c2"]}}',
-  '{"op":"add","path":"/elements/c1","value":{"type":"Chip","props":{"label":"Dale, vamos"},"on":{"press":{"action":"reply","params":{"text":"sí, vamos"}}},"children":[]}}',
-  '{"op":"add","path":"/elements/c2","value":{"type":"Chip","props":{"label":"Más tarde"},"on":{"press":{"action":"reply","params":{"text":"más tarde"}}},"children":[]}}',
-].join('\n');
-
 export function seedWelcomeMessage(): void {
   const store = useChatStore.getState();
   if (store.messages.length > 0) return;
@@ -222,7 +215,7 @@ export function seedWelcomeMessage(): void {
       id: 'onboarding-init',
       conversationId: MOCK_CONVERSATION_ID,
       role: 'assistant',
-      content: `Hola, soy Gohan, tu coach AI. Para armarte una rutina personalizada, ¿te tiro unas preguntas rápidas para conocerte mejor?\n\n${ONBOARDING_INIT_CHIPS}`,
+      content: 'Hola, soy Gohan, tu coach AI. Para armarte una rutina personalizada, te tiro unas preguntas rápidas para conocerte mejor. ¿Arrancamos?',
       audioUrl: null,
       createdAt: new Date().toISOString(),
     });
