@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore, useTenantStore } from "@/store";
+import { ToastHost } from "@/components/ui";
 import {
   getProfile,
   getTenantById,
@@ -16,16 +17,33 @@ function useProtectedRoute() {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
+  const user = useAuthStore((s) => s.user);
 
   useEffect(() => {
     if (isLoading) return;
     const inAuth = segments[0] === "(auth)";
     if (!isAuthenticated && !inAuth) {
       router.replace("/(auth)/login");
-    } else if (isAuthenticated && inAuth) {
-      router.replace("/");
+      return;
     }
-  }, [isAuthenticated, segments, isLoading]);
+    if (isAuthenticated && inAuth) {
+      const target = user && !user.onboardingCompleted ? "/coach" : "/";
+      router.replace(target);
+      return;
+    }
+    // Already inside the app: if a freshly-signed-up user is on any tab
+    // other than coach, push them to the coach onboarding flow.
+    const segs = segments as readonly string[];
+    if (
+      isAuthenticated &&
+      user &&
+      !user.onboardingCompleted &&
+      segs[0] === "(tabs)" &&
+      segs[1] !== "coach"
+    ) {
+      router.replace("/coach");
+    }
+  }, [isAuthenticated, segments, isLoading, user]);
 }
 
 // Web-only: visiting with ?demo=1 auto-signs into the demo account so the
@@ -101,6 +119,7 @@ export default function RootLayout() {
           }}
         />
       </Stack>
+      <ToastHost />
     </>
   );
 }
