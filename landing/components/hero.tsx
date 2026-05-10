@@ -63,7 +63,7 @@ export function Hero() {
         delay={900}
         className="absolute right-6 md:right-10 top-32 md:top-44 hidden md:block"
       >
-        <div className="text-right text-[10px] uppercase tracking-[0.22em] text-[var(--color-mute)] font-mono">
+        <div className="text-right text-[13px] uppercase tracking-[0.22em] text-[var(--color-mute)] font-mono">
           <div className="flex items-center justify-end gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-flame)] pulse-ring" />
             <span>v0.1 · Live demo</span>

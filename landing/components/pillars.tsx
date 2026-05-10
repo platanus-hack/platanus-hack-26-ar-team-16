@@ -64,7 +64,7 @@ export function Pillars() {
               <Tilt max={4}>
                 <article className="bg-[var(--color-ink)] p-10 md:p-12 min-h-[420px] flex flex-col justify-between hover:bg-[color-mix(in_srgb,var(--color-ink)_92%,var(--color-flame))] transition-colors duration-500">
                   <div className="flex items-center gap-3">
-                    <div className="text-[var(--color-flame)] font-mono text-xs tracking-[0.2em]">
+                    <div className="text-[var(--color-flame)] font-mono text-sm tracking-[0.2em]">
                       {p.n.toUpperCase()}.
                     </div>
                     <span className="h-px flex-1 bg-[var(--color-paper)]/15 group-hover:bg-[var(--color-flame)]/40 transition-colors" />

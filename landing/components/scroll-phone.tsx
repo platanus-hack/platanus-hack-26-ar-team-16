@@ -33,25 +33,27 @@ export function ScrollPhone() {
   const [progress, setProgress] = useState(0);
   const [interactive, setInteractive] = useState(false);
   const isMobile = useIsMobile();
-  // Cap the phone scale so the iPhone always fits in the viewport with
-  // generous margins for the nav (top) and tab bar inside the iframe (bottom).
-  // Without this, on shorter desktop viewports the 844px-tall phone clips
-  // under the nav and below the fold, eating the bottom buttons of the app.
-  const [maxScale, setMaxScale] = useState(1);
+  // fitScale shrinks the *layout box* of the phone so it never overflows
+  // the viewport — even on a 13" MBP at fullscreen. We scale dimensions and
+  // chrome (bezel, notch, side buttons) by this factor; transform: scale()
+  // alone wasn't enough because it doesn't change the layout box, so the
+  // 844px-tall iPhone kept eating into the nav and below the fold.
+  const [fitScale, setFitScale] = useState(1);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const compute = () => {
       if (isMobile) {
-        setMaxScale(1);
+        setFitScale(1);
         return;
       }
       const navHeight = 56; // h-14 fixed nav
-      // ~80px above and below the phone so the iframe's header (Megatlon
-      // brand bar, bell, search) and bottom tab bar are clearly visible
-      // and clickable, not eaten by the page chrome.
-      const breathingRoom = 160;
+      // ~100px above and below the phone so the iframe's header and bottom
+      // tab bar (INICIO / GOHAN / RUTINAS / MÁS) are clickable, plus extra
+      // for the page nav backdrop blur.
+      const breathingRoom = 200;
       const fit = (window.innerHeight - navHeight - breathingRoom) / IPHONE_H;
-      setMaxScale(Math.min(1, Math.max(0.6, fit)));
+      // No floor: on very short viewports the phone shrinks but always fits.
+      setFitScale(Math.min(1, fit));
     };
     compute();
     window.addEventListener("resize", compute);
@@ -113,12 +115,17 @@ export function ScrollPhone() {
     };
   }, [progress, isMobile]);
 
-  // Map progress 0..1 into a phone scale 0.7 .. maxScale and a corner radius
-  // 2.75rem .. 0.4rem (some rounding stays even at full-bleed for charm).
-  // Starts larger so the phone feels present from the moment the section enters.
+  // Animation: 0.7 → 1.0 of the *fitted* size (so on small viewports the
+  // phone still grows from a smaller starting point but never exceeds the
+  // safe area). Layout box dimensions further down use fitScale directly,
+  // not animScale, so the box always fits regardless of expansion.
   const expansion = Math.min(1, Math.max(0, (progress - 0.05) / 0.7));
-  const scale = 0.7 + expansion * (maxScale - 0.7);
+  const animScale = 0.7 + expansion * 0.3;
   const radius = 2.75 - expansion * 2.4;
+  const isFullBleed = isMobile && animScale > 0.95;
+  // Helper: scale a native iPhone-13 pixel value down to fit-size pixels.
+  // Returns null when full-bleed mobile (no chrome rendered there).
+  const fp = (n: number) => `${Math.round(n * fitScale)}px`;
 
   return (
     <section id="try" className="bg-[var(--color-cream)]">
@@ -154,30 +161,26 @@ export function ScrollPhone() {
             interactive ? "iframe-locked" : ""
           }`}
         >
-          {/* Phone frame.
-              Desktop: locked to iPhone 13 logical 390x844, regardless of
-              expansion. The scale 0.7→1.0 animation still runs but the
-              underlying box never leaves iPhone proportions, so it always
-              looks like a real device on the page.
-              Mobile: at full bleed (scale > 0.95) the frame jumps to
-              100vw/100vh so phone visitors see the app at native size. */}
+          {/* Phone frame. Layout dimensions are fit-scaled so the box
+              never overflows the viewport. Chrome (bezel, notch, side
+              buttons) is fit-scaled too so proportions stay iPhone-13.
+              The 0.7→1.0 anim transform sits on top for the open effect.
+              Mobile at scroll-end jumps to 100vw/100vh full-bleed. */}
           <div
             ref={stageRef}
             className="phone-stage relative origin-center transition-[box-shadow] duration-300"
             style={{
-              transform: `scale(${scale})`,
+              transform: `scale(${animScale})`,
               borderRadius: `${radius}rem`,
-              width: isMobile && scale > 0.95 ? "100vw" : `${IPHONE_W}px`,
-              height: isMobile && scale > 0.95 ? "100vh" : `${IPHONE_H}px`,
-              background:
-                isMobile && scale > 0.95
-                  ? "var(--color-ink)"
-                  : "linear-gradient(155deg, #1c1c1e 0%, #050505 50%, #1c1c1e 100%)",
-              padding: isMobile && scale > 0.95 ? "0" : "12px",
-              boxShadow:
-                isMobile && scale > 0.95
-                  ? "0 0 0 0 transparent"
-                  : "0 0 0 1.5px #2a2a2a, inset 0 0 0 0.5px rgba(255,255,255,0.04), 0 30px 80px -20px rgba(0,0,0,0.45), 0 10px 30px -10px rgba(0,0,0,0.25)",
+              width: isFullBleed ? "100vw" : fp(IPHONE_W),
+              height: isFullBleed ? "100vh" : fp(IPHONE_H),
+              background: isFullBleed
+                ? "var(--color-ink)"
+                : "linear-gradient(155deg, #1f1f21 0%, #050505 50%, #1f1f21 100%)",
+              padding: isFullBleed ? "0" : fp(14),
+              boxShadow: isFullBleed
+                ? "0 0 0 0 transparent"
+                : `0 0 0 ${fp(2)} #2a2a2a, inset 0 0 0 0.5px rgba(255,255,255,0.05), 0 30px 80px -20px rgba(0,0,0,0.45), 0 10px 30px -10px rgba(0,0,0,0.25)`,
             }}
           >
             {/* iframe = the real app */}
@@ -192,43 +195,92 @@ export function ScrollPhone() {
               allow="microphone"
             />
 
-            {/* Dynamic-Island-style notch. Centered, slightly below the
-                top edge, with a subtle camera dot. Hidden in full-bleed
-                mobile mode (we're already inside a real device). */}
-            {!(isMobile && scale > 0.95) && (
+            {/* iPhone 13 notch. Anchored to the very top of the chassis
+                so it reads as a real cutout (not a floating Dynamic
+                Island pill). Camera + speaker grille inside. */}
+            {!isFullBleed && (
               <div
                 aria-hidden
-                className="absolute top-[10px] left-1/2 -translate-x-1/2 z-10 h-[26px] w-[110px] rounded-full bg-black flex items-center justify-end pr-2 transition-opacity duration-300"
-                style={{ opacity: scale < 0.95 ? 1 : 0.92 }}
+                className="absolute left-1/2 -translate-x-1/2 z-10 bg-black flex items-center justify-center"
+                style={{
+                  top: fp(12),
+                  height: fp(34),
+                  width: fp(160),
+                  borderBottomLeftRadius: fp(20),
+                  borderBottomRightRadius: fp(20),
+                  borderTopLeftRadius: fp(8),
+                  borderTopRightRadius: fp(8),
+                  gap: fp(10),
+                }}
               >
-                <span className="w-[7px] h-[7px] rounded-full bg-[#0c0c0c] ring-1 ring-[#1d1d1f]" />
+                {/* speaker grille */}
+                <span
+                  className="bg-[#1d1d1f]"
+                  style={{
+                    width: fp(50),
+                    height: fp(5),
+                    borderRadius: fp(3),
+                  }}
+                />
+                {/* camera */}
+                <span
+                  className="bg-[#0c0c0c] ring-1 ring-[#1d1d1f]"
+                  style={{
+                    width: fp(11),
+                    height: fp(11),
+                    borderRadius: fp(11),
+                  }}
+                />
               </div>
             )}
 
-            {/* Side buttons. Thin metallic strips that protrude a hair from
-                the frame — cheap detail that reads as iPhone instantly.
-                Hidden in mobile full-bleed since there's no frame anymore. */}
-            {!(isMobile && scale > 0.95) && (
+            {/* Side buttons. Slightly thicker strips so they actually
+                read as iPhone hardware at the fitted scale. */}
+            {!isFullBleed && (
               <>
                 {/* silent / mute switch (top-left) */}
                 <span
                   aria-hidden
-                  className="absolute -left-[2px] top-[100px] w-[2px] h-[28px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                  className="absolute rounded-l-md bg-gradient-to-b from-[#3a3a3a] to-[#0e0e0e]"
+                  style={{
+                    left: fp(-3),
+                    top: fp(108),
+                    width: fp(4),
+                    height: fp(34),
+                  }}
                 />
                 {/* volume up */}
                 <span
                   aria-hidden
-                  className="absolute -left-[2px] top-[150px] w-[2px] h-[52px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                  className="absolute rounded-l-md bg-gradient-to-b from-[#3a3a3a] to-[#0e0e0e]"
+                  style={{
+                    left: fp(-3),
+                    top: fp(170),
+                    width: fp(4),
+                    height: fp(60),
+                  }}
                 />
                 {/* volume down */}
                 <span
                   aria-hidden
-                  className="absolute -left-[2px] top-[212px] w-[2px] h-[52px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                  className="absolute rounded-l-md bg-gradient-to-b from-[#3a3a3a] to-[#0e0e0e]"
+                  style={{
+                    left: fp(-3),
+                    top: fp(240),
+                    width: fp(4),
+                    height: fp(60),
+                  }}
                 />
                 {/* power / wake (right side) */}
                 <span
                   aria-hidden
-                  className="absolute -right-[2px] top-[140px] w-[2px] h-[80px] rounded-r-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                  className="absolute rounded-r-md bg-gradient-to-b from-[#3a3a3a] to-[#0e0e0e]"
+                  style={{
+                    right: fp(-3),
+                    top: fp(160),
+                    width: fp(4),
+                    height: fp(96),
+                  }}
                 />
               </>
             )}
@@ -237,7 +289,7 @@ export function ScrollPhone() {
           {/* Caption tracking the expansion progress */}
           <div className="pointer-events-none absolute inset-x-0 bottom-8 md:bottom-10 flex items-center justify-center px-6">
             <div
-              className="px-4 py-2 rounded-full bg-[var(--color-ink)]/85 text-[var(--color-paper)] text-[11px] font-mono uppercase tracking-[0.2em] backdrop-blur-md transition-opacity duration-300"
+              className="px-5 py-2.5 rounded-full bg-[var(--color-ink)]/85 text-[var(--color-paper)] text-sm font-mono uppercase tracking-[0.2em] backdrop-blur-md transition-opacity duration-300"
               style={{ opacity: interactive ? 0 : 1 }}
             >
               {progress < 0.05
@@ -278,7 +330,7 @@ function SideCaptions({ progress, isMobile }: { progress: number; isMobile: bool
       : Math.max(0, 1 - (progress - 0.5) / 0.12);
   return (
     <div
-      className="hidden md:block absolute right-6 lg:right-10 top-1/2 -translate-y-1/2 w-64 lg:w-72 space-y-6 transition-opacity duration-300"
+      className="hidden md:block absolute right-6 lg:right-10 top-1/2 -translate-y-1/2 w-72 lg:w-80 space-y-7 transition-opacity duration-300"
       style={{
         opacity: groupOpacity,
         pointerEvents: groupOpacity < 0.05 ? "none" : "auto",
@@ -296,10 +348,10 @@ function SideCaptions({ progress, isMobile }: { progress: number; isMobile: bool
               transform: `translateX(${active ? 0 : 12}px)`,
             }}
           >
-            <div className="eyebrow text-[var(--color-flame)] mb-1.5">
+            <div className="eyebrow text-[var(--color-flame)] mb-2">
               {c.label}
             </div>
-            <div className="text-[var(--color-graphite)] text-sm leading-snug">
+            <div className="text-[var(--color-graphite)] text-base leading-snug">
               {c.text}
             </div>
           </div>
@@ -360,7 +412,7 @@ function DemoQr() {
           loading="lazy"
         />
       </div>
-      <p className="mt-3 text-[12px] text-[var(--color-mute)] leading-relaxed">
+      <p className="mt-4 text-sm text-[var(--color-mute)] leading-relaxed">
         Same demo, in your hand. Camera + voice prompts work natively
         from the browser.
       </p>
