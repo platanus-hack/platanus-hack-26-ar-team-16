@@ -176,13 +176,24 @@ export function ScrollPhone() {
 
 function SideCaptions({ progress }: { progress: number }) {
   const captions = [
-    { at: 0.1, label: "Login screen", text: "Email + password. Demo creds shown above." },
+    { at: 0.1, label: "Auto sign-in", text: "Demo account loads. No login form to fill in." },
     { at: 0.35, label: "Home dashboard", text: "Today's workout, weekly streak, branded by tenant." },
     { at: 0.6, label: "Routine view", text: "Day-by-day breakdown. Updates in real time." },
     { at: 0.85, label: "Coach chat", text: "Ask. Watch the routine rewrite itself." },
   ];
+  // Fade the whole group out as the phone approaches full bleed (scale > 0.95
+  // happens around progress 0.63). By 0.62 they're fully gone so they never
+  // sit on top of the live iframe.
+  const groupOpacity = progress < 0.5 ? 1 : Math.max(0, 1 - (progress - 0.5) / 0.12);
   return (
-    <div className="hidden md:block absolute right-6 lg:right-10 top-1/2 -translate-y-1/2 w-64 lg:w-72 space-y-6">
+    <div
+      className="hidden md:block absolute right-6 lg:right-10 top-1/2 -translate-y-1/2 w-64 lg:w-72 space-y-6 transition-opacity duration-300"
+      style={{
+        opacity: groupOpacity,
+        pointerEvents: groupOpacity < 0.05 ? "none" : "auto",
+      }}
+      aria-hidden={groupOpacity < 0.05}
+    >
       {captions.map((c) => {
         const active = progress >= c.at - 0.08 && progress <= c.at + 0.18;
         return (
