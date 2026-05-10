@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { RoutineDay } from '../../modules/routine/types';
+import { StreakBadge } from './StreakBadge';
 
 interface RoutineHeaderProps {
   selectedDay: RoutineDay | null;
@@ -10,9 +11,18 @@ interface RoutineHeaderProps {
   /** Active routine name shown as the header title (replaces the static label
    *  when present so the user always sees which routine they're viewing). */
   activeRoutineName?: string | null;
+  /** Streak info — when provided, shows a tappable fire badge that opens the
+   *  weekly streak modal. */
+  streakDays?: number;
+  onPressStreak?: () => void;
 }
 
-export function RoutineHeader({ onPressCalendar, activeRoutineName }: RoutineHeaderProps) {
+export function RoutineHeader({
+  onPressCalendar,
+  activeRoutineName,
+  streakDays,
+  onPressStreak,
+}: RoutineHeaderProps) {
   return (
     <View style={styles.wrap}>
       <View style={{ flex: 1 }}>
@@ -23,6 +33,9 @@ export function RoutineHeader({ onPressCalendar, activeRoutineName }: RoutineHea
           </Text>
         )}
       </View>
+      {typeof streakDays === 'number' && (
+        <StreakBadge daysTrained={streakDays} onPress={onPressStreak} />
+      )}
       <Pressable
         onPress={onPressCalendar}
         accessibilityRole="button"

@@ -6,3 +6,5 @@ export { CalendarModal } from './CalendarModal';
 export { ExerciseDetailScreen } from './ExerciseDetailScreen';
 export { EmptyState } from './EmptyState';
 export { ExerciseLogModal } from './ExerciseLogModal';
+export { StreakModal } from './StreakModal';
+export { StreakBadge } from './StreakBadge';
