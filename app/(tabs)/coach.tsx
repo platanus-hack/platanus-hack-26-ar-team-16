@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Platform, View, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MessageList, MessageInput, CoachStylePicker } from '@/components/chat';
-import { useChatStore } from '@/store';
+import { useChatStore, useAuthStore } from '@/store';
 import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
 import { useSpeechRecognition } from '@/hooks';
 import { useTheme } from '@/theme';
@@ -12,12 +12,15 @@ export default function CoachScreen() {
   const messages = useChatStore((s) => s.messages);
   const isStreaming = useChatStore((s) => s.streaming.isStreaming);
   const activeTool = useChatStore((s) => s.activeTool);
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
   const theme = useTheme();
   const { isListening, transcript, startListening, stopListening } = useSpeechRecognition();
 
   useEffect(() => {
-    seedWelcomeMessage();
-  }, []);
+    if (!isAuthLoading) {
+      seedWelcomeMessage();
+    }
+  }, [isAuthLoading]);
 
   const handleSend = (text: string) => {
     void sendUserMessage(text);
