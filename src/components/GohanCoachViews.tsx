@@ -16,6 +16,7 @@ import {
   EmptyState,
   ExerciseCard,
   ExerciseDetailScreen,
+  ExerciseLogModal,
   RoutineHeader,
   RoutineSelector,
 } from '@/components/routine';
@@ -141,6 +142,8 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [logExercise, setLogExercise] = useState<Exercise | null>(null);
+  const [logVersion, setLogVersion] = useState(0);
 
   useEffect(() => {
     if (!routine?.days?.length) {
@@ -258,6 +261,8 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
               exercise={ex}
               highlighted={recentlyChanged.has(ex.id)}
               onPress={(e) => setSelectedExercise(e)}
+              onPressLog={(e) => setLogExercise(e)}
+              logVersion={logVersion}
             />
           ))
         )}
@@ -273,6 +278,14 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       <ExerciseDetailScreen
         exercise={selectedExercise}
         onClose={() => setSelectedExercise(null)}
+      />
+
+      <ExerciseLogModal
+        exercise={logExercise}
+        onClose={(saved) => {
+          setLogExercise(null);
+          if (saved) setLogVersion((v) => v + 1);
+        }}
       />
     </SafeAreaView>
   );

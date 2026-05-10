@@ -5,3 +5,4 @@ export { ExerciseCard } from './ExerciseCard';
 export { CalendarModal } from './CalendarModal';
 export { ExerciseDetailScreen } from './ExerciseDetailScreen';
 export { EmptyState } from './EmptyState';
+export { ExerciseLogModal } from './ExerciseLogModal';
