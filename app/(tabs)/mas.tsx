@@ -92,7 +92,7 @@ export default function MasScreen() {
           <Text style={{ color: '#444444', fontSize: 11 }}>Versión 3.0.1</Text>
         </View>
 
-        <View style={{ height: 96 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );

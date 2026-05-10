@@ -170,7 +170,7 @@ export default function InicioScreen() {
           ))}
         </ScrollView>
 
-        <View style={{ height: 96 }} />
+        <View style={{ height: 16 }} />
       </ScrollView>
     </SafeAreaView>
   );

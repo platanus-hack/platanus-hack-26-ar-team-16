@@ -40,7 +40,7 @@ export function MessageList({ messages, isStreaming, activeTool = null }: Messag
       data={messages}
       keyExtractor={(m) => m.id}
       style={{ backgroundColor: '#000000' }}
-      contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+      contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
       renderItem={({ item, index }) => (
         <ChatBubble
           message={item}

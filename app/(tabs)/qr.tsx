@@ -76,7 +76,7 @@ export default function QRScreen() {
         <Text style={{ color: '#B8B8B8', fontSize: 13, marginTop: 12 }}>1</Text>
       </View>
 
-      <View style={{ height: 88 }} />
+      <View style={{ height: 16 }} />
     </SafeAreaView>
   );
 }
