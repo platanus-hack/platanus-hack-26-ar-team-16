@@ -5,7 +5,7 @@
 // next commit) so render code lives in exactly one place.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,14 +16,20 @@ import {
   EmptyState,
   ExerciseCard,
   ExerciseDetailScreen,
+  ExerciseLogModal,
   RoutineHeader,
+  RoutineSelector,
+  StreakModal,
 } from '@/components/routine';
+import { getWeekStreak } from '@/services/streak';
 import { useTheme } from '@/theme';
 import { useChatStore, useAuthStore, useRoutineStore } from '@/store';
 import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
 import { useSpeechRecognition, useRealtimeRoutine } from '@/hooks';
 import { normalizeRoutine, sortExercises } from '@/modules/routine/groupByDay';
 import type { Exercise } from '@/modules/routine/types';
+import { setActiveRoutine } from '@/services/routines';
+import { toast } from '@/store';
 
 interface CommonProps {
   onError?: (e: Error) => void;
@@ -119,13 +125,42 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   useRealtimeRoutine(userId);
 
   const rawRoutine = useRoutineStore((s) => s.routine);
+  const routines = useRoutineStore((s) => s.routines);
   const isLoading = useRoutineStore((s) => s.isLoading);
+
+  const handleSwitchRoutine = async (routineId: string) => {
+    if (!userId) return;
+    try {
+      await setActiveRoutine(userId, routineId);
+      // Realtime listener picks up the change and refetches.
+    } catch (err) {
+      toast.error('No pudimos cambiar la rutina.');
+      onError?.(err as Error);
+    }
+  };
 
   const routine = useMemo(() => normalizeRoutine(rawRoutine), [rawRoutine]);
 
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
+  const [logExercise, setLogExercise] = useState<Exercise | null>(null);
+  const [logVersion, setLogVersion] = useState(0);
+  const [streakVisible, setStreakVisible] = useState(false);
+  const [streak, setStreak] = useState<{ daysTrained: number; totalLogs: number }>({
+    daysTrained: 0,
+    totalLogs: 0,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    getWeekStreak().then((s) => {
+      if (!cancelled) setStreak({ daysTrained: s.daysTrained, totalLogs: s.totalLogs });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [logVersion]);
 
   useEffect(() => {
     if (!routine?.days?.length) {
@@ -207,7 +242,12 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       <RoutineHeader
         selectedDay={selectedDay}
         onPressCalendar={() => setCalendarVisible(true)}
+        activeRoutineName={routine.name}
+        streakDays={streak.daysTrained}
+        onPressStreak={() => setStreakVisible(true)}
       />
+
+      <RoutineSelector routines={routines} onSelect={handleSwitchRoutine} />
 
       <DaySelector
         days={routine.days}
@@ -219,6 +259,33 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
+        <Pressable
+          onPress={() => onRequestChat?.()}
+          accessibilityRole="button"
+          accessibilityLabel="Modificar rutina con Gohan"
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingHorizontal: 14,
+            paddingVertical: 12,
+            borderRadius: 14,
+            backgroundColor: '#1a1a1a',
+            borderWidth: 1,
+            borderColor: '#FF6B0044',
+            opacity: pressed ? 0.8 : 1,
+          })}
+        >
+          <Ionicons name="sparkles" size={18} color="#FF6B00" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>Modificar rutina</Text>
+            <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>
+              Pedile cambios a Gohan en el chat
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#666" />
+        </Pressable>
+
         {exercises.length === 0 ? (
           <View className="bg-zinc-900 rounded-2xl p-6 items-center">
             <ExerciseCard
@@ -240,6 +307,8 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
               exercise={ex}
               highlighted={recentlyChanged.has(ex.id)}
               onPress={(e) => setSelectedExercise(e)}
+              onPressLog={(e) => setLogExercise(e)}
+              logVersion={logVersion}
             />
           ))
         )}
@@ -255,6 +324,21 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       <ExerciseDetailScreen
         exercise={selectedExercise}
         onClose={() => setSelectedExercise(null)}
+      />
+
+      <ExerciseLogModal
+        exercise={logExercise}
+        onClose={(saved) => {
+          setLogExercise(null);
+          if (saved) setLogVersion((v) => v + 1);
+        }}
+      />
+
+      <StreakModal
+        visible={streakVisible}
+        daysTrained={streak.daysTrained}
+        totalLogs={streak.totalLogs}
+        onClose={() => setStreakVisible(false)}
       />
     </SafeAreaView>
   );

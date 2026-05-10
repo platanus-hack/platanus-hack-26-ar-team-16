@@ -2,6 +2,8 @@
 
 DONT MAKE COMMITS UNLESS EXPLICITLY ASKED
 
+OUR SINGLE SOURCE OF TRUTH FOR ACRHITECTURAL DECISIONS IS /docs/ARCHITECTURE.md, all code changes must be having these architectural decisions in mind. and any architectural decisions must be consistent with this document. And changes to this document must preceed any deviations from its current state with clear explanations on why they were needed or improvements.
+
 ## Project
 
 AI-powered personal trainer modules for existing gym apps. Chat with AI coach → personalized routines generated and updated in real-time. B2B multi-tenant, integrable via MCP server.

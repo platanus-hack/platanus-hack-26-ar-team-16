@@ -1,6 +1,10 @@
 export { RoutineHeader } from './RoutineHeader';
+export { RoutineSelector } from './RoutineSelector';
 export { DaySelector } from './DaySelector';
 export { ExerciseCard } from './ExerciseCard';
 export { CalendarModal } from './CalendarModal';
 export { ExerciseDetailScreen } from './ExerciseDetailScreen';
 export { EmptyState } from './EmptyState';
+export { ExerciseLogModal } from './ExerciseLogModal';
+export { StreakModal } from './StreakModal';
+export { StreakBadge } from './StreakBadge';
