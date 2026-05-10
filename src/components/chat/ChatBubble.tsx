@@ -35,14 +35,14 @@ export function ChatBubble({ message, isStreaming = false }: ChatBubbleProps) {
           maxWidth: '85%',
           ...(isUser
             ? { borderBottomRightRadius: 6, backgroundColor: theme.primary }
-            : { borderBottomLeftRadius: 6, backgroundColor: '#F1F5F9' }),
+            : { borderBottomLeftRadius: 6, backgroundColor: '#1F1F1F' }),
         }}
       >
         {text.length > 0 && (
-          <Text className="text-base" style={{ color: isUser ? '#FFFFFF' : '#0F172A' }}>
+          <Text className="text-base" style={{ color: '#FFFFFF' }}>
             {text}
             {isStreaming && !isUser && !spec && (
-              <Text style={{ color: '#94A3B8' }}>{'▍'}</Text>
+              <Text style={{ color: '#888888' }}>{'▍'}</Text>
             )}
           </Text>
         )}

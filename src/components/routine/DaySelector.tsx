@@ -9,7 +9,7 @@ interface DaySelectorProps {
   onSelect: (dayId: string) => void;
 }
 
-const DAY_ABBREVS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const DAY_ABBREVS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
 
 export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps) {
   if (!days.length) return null;
@@ -22,24 +22,23 @@ export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps)
     >
       {days.map((day, idx) => {
         const isActive = day.id === selectedDayId;
-        const sub = day.muscle_groups?.length
-          ? day.muscle_groups.slice(0, 2).join(' · ')
-          : DAY_ABBREVS[idx % 7];
+        const abbrev = DAY_ABBREVS[day.day_index] ?? DAY_ABBREVS[idx % 7];
+        const muscle = day.muscle_groups?.[0] ?? day.name;
 
         return (
           <Pressable
             key={day.id}
             onPress={() => onSelect(day.id)}
             accessibilityRole="button"
-            accessibilityLabel={`${day.name}: ${sub}`}
+            accessibilityLabel={`${abbrev}: ${muscle}`}
             accessibilityState={{ selected: isActive }}
             style={[styles.pill, isActive && styles.pillActive]}
           >
-            <Text style={[styles.pillName, isActive && styles.pillNameActive]} numberOfLines={1}>
-              {day.name}
+            <Text style={styles.pillName} numberOfLines={1}>
+              {abbrev}
             </Text>
             <Text style={[styles.pillSub, isActive && styles.pillSubActive]} numberOfLines={1}>
-              {sub}
+              {muscle}
             </Text>
           </Pressable>
         );
@@ -56,31 +55,29 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pill: {
-    minWidth: 70,
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#1a1a1a',
+    minWidth: 88,
+    height: 64,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    backgroundColor: '#1A1A1A',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   pillActive: {
     backgroundColor: '#FF6B00',
   },
   pillName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    letterSpacing: 0.6,
-    marginBottom: 2,
-  },
-  pillNameActive: {
-    color: '#fff',
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
   pillSub: {
-    fontSize: 10,
-    color: '#b8b8b8',
+    fontSize: 11,
+    color: '#B8B8B8',
+    marginTop: 2,
   },
   pillSubActive: {
-    color: '#fff',
+    color: '#FFFFFF',
   },
 });

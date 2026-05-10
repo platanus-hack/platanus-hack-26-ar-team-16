@@ -20,14 +20,14 @@ export function AudioButton({ isRecording, onPress, disabled = false }: AudioBut
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: 20,
-        backgroundColor: isRecording ? '#EF4444' : '#F1F5F9',
+        backgroundColor: isRecording ? '#FF6B00' : '#1A1A1A',
         opacity: disabled ? 0.5 : 1,
       }}
     >
       <Ionicons
         name={isRecording ? 'stop' : 'mic'}
         size={20}
-        color={isRecording ? '#FFFFFF' : theme.primary}
+        color={isRecording ? '#FFFFFF' : '#666666'}
       />
     </Pressable>
   );

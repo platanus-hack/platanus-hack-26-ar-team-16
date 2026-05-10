@@ -126,7 +126,7 @@ export default function RoutineScreen() {
       />
 
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, gap: 12 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
       >
         {exercises.length === 0 ? (
