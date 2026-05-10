@@ -175,20 +175,6 @@ export async function markExerciseCompleted(
   if (error) throw error;
 }
 
-/** Read-only routine IDs for a user — used by useRealtimeRoutine to scope
- *  postgres_changes filters away from cross-tenant leaks (§11). */
-export async function getRoutineIdsForUser(
-  userId: string,
-  client?: Db,
-): Promise<string[]> {
-  const { data, error } = await db(client)
-    .from('routines')
-    .select('id')
-    .eq('user_id', userId);
-  if (error) throw error;
-  return ((data ?? []) as { id: string }[]).map((r) => r.id);
-}
-
 export interface RoutineSummary {
   id: string;
   name: string;

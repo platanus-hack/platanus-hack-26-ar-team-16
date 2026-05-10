@@ -239,29 +239,26 @@ tool(
 async function exerciseBelongsToTenant(exerciseId: string): Promise<boolean> {
   const c = ctx();
   if (!c.tenantId) return true;
+  // Post-migration 008, tenant_id is denormalized onto routine_exercises;
+  // no JOIN through routines/routine_days needed.
   const { data } = await getSupabase()
     .from('routine_exercises')
-    .select('routine_day_id, routine_days!inner(routine_id, routines!inner(tenant_id))')
+    .select('tenant_id')
     .eq('id', exerciseId)
     .maybeSingle();
-  // The nested select returns an object; cast to access tenant_id.
-  const tid = (data as unknown as {
-    routine_days?: { routines?: { tenant_id?: string } };
-  } | null)?.routine_days?.routines?.tenant_id;
-  return tid === c.tenantId;
+  return (data as { tenant_id?: string } | null)?.tenant_id === c.tenantId;
 }
 
 async function routineDayBelongsToTenant(routineDayId: string): Promise<boolean> {
   const c = ctx();
   if (!c.tenantId) return true;
+  // Post-migration 008, tenant_id is denormalized onto routine_days.
   const { data } = await getSupabase()
     .from('routine_days')
-    .select('routine_id, routines!inner(tenant_id)')
+    .select('tenant_id')
     .eq('id', routineDayId)
     .maybeSingle();
-  const tid = (data as unknown as { routines?: { tenant_id?: string } } | null)?.routines
-    ?.tenant_id;
-  return tid === c.tenantId;
+  return (data as { tenant_id?: string } | null)?.tenant_id === c.tenantId;
 }
 
 tool(
@@ -310,6 +307,18 @@ tool(
     if (!(await routineDayBelongsToTenant(routine_day_id))) {
       return txt('Error: routine_day not found for this tenant');
     }
+
+    // Migration 008 denormalized user_id + tenant_id onto routine_days
+    // and routine_exercises (ARCHITECTURE.md §16.1). Pull them from the
+    // parent row so the insert can populate the NOT NULL columns.
+    const { data: parent } = await getSupabase()
+      .from('routine_days')
+      .select('user_id, tenant_id')
+      .eq('id', routine_day_id)
+      .single();
+
+    if (!parent) return txt('Error: routine_day not found');
+
     const { data: maxOrder } = await getSupabase()
       .from('routine_exercises')
       .select('order_index')
@@ -320,6 +329,8 @@ tool(
 
     const { error } = await getSupabase().from('routine_exercises').insert({
       routine_day_id,
+      user_id: parent.user_id,
+      tenant_id: parent.tenant_id,
       ...exercise,
       order_index: (maxOrder?.order_index ?? -1) + 1,
     });
@@ -368,7 +379,7 @@ tool(
 
     const { data: existing, error: fetchError } = await getSupabase()
       .from('routine_exercises')
-      .select('routine_day_id, order_index')
+      .select('routine_day_id, order_index, user_id, tenant_id')
       .eq('id', exercise_id)
       .single();
 
@@ -385,6 +396,8 @@ tool(
       .from('routine_exercises')
       .insert({
         routine_day_id: existing.routine_day_id,
+        user_id: existing.user_id,
+        tenant_id: existing.tenant_id,
         order_index: existing.order_index,
         ...newExercise,
       });

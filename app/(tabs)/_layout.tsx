@@ -12,7 +12,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Tabs } from 'expo-router';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 
@@ -22,17 +22,17 @@ const MT = {
   navBg: '#0F0F0F',
   navBorder: '#1A1A1A',
   textActive: '#FFFFFF',
-  textIdle: '#6B6B6B',
+  textIdle: '#B5B5B5',
   brand: '#FF6B00',
   fabBg: '#FFFFFF',
 } as const;
 
 const TAB_ICONS = {
-  index: 'home-variant-outline',
-  coach: 'message-outline',
-  qr: 'qrcode-scan',
-  routine: 'dumbbell',
-  mas: 'menu',
+  index: 'home',
+  coach: 'body',
+  qr: 'qr-code',
+  routine: 'barbell',
+  mas: 'grid',
 } as const;
 
 const TAB_LABELS = {
@@ -51,6 +51,9 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
     if (!isFocused && !event.defaultPrevented) navigation.navigate(routeName as never);
   };
 
+  const ICON_SIZE = 30;
+  const FAB_DIAMETER = 60;
+
   return (
     <View
       style={{
@@ -59,16 +62,70 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
         backgroundColor: MT.navBg,
         borderTopWidth: 1,
         borderTopColor: MT.navBorder,
-        height: 76,
-        paddingBottom: 8,
+        height: 60,
+        paddingBottom: 6,
+        overflow: 'visible',
       }}
     >
       {state.routes.map((route, idx) => {
         const isFocused = state.index === idx;
         const isQr = route.name === 'qr';
+        const isCoach = route.name === 'coach';
+        const IconComponent: any = isCoach ? MaterialCommunityIcons : Ionicons;
 
         const iconName = TAB_ICONS[route.name as TabName] ?? 'help-circle-outline';
         const label = TAB_LABELS[route.name as TabName] ?? (descriptors[route.key]?.options.title ?? '');
+
+        if (isQr) {
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => onTabPress(route.name, route.key, isFocused)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: isFocused }}
+              accessibilityLabel={label}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                // @ts-expect-error web-only: suppress browser default focus ring
+                outline: 'none',
+              }}
+            >
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -(FAB_DIAMETER / 2),
+                  width: FAB_DIAMETER,
+                  height: FAB_DIAMETER,
+                  borderRadius: FAB_DIAMETER / 2,
+                  backgroundColor: MT.bg,
+                  borderWidth: 1.5,
+                  borderColor: MT.brand,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons
+                  name={iconName as any}
+                  size={ICON_SIZE}
+                  color={isFocused ? MT.textActive : MT.textIdle}
+                />
+              </View>
+              <Text
+                style={{
+                  fontSize: 10,
+                  fontWeight: '500',
+                  letterSpacing: 0.6,
+                  marginBottom: 4,
+                  color: isFocused ? MT.textActive : MT.textIdle,
+                }}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        }
 
         return (
           <Pressable
@@ -80,7 +137,7 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             style={{
               flex: 1,
               alignItems: 'center',
-              paddingTop: 8,
+              paddingTop: 6,
               // @ts-expect-error web-only: suppress browser default focus ring
               outline: 'none',
             }}
@@ -97,18 +154,18 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                 }}
               />
             ) : null}
-            <MaterialCommunityIcons
+            <Ionicons
               name={iconName as any}
-              size={22}
-              color={isQr ? MT.brand : isFocused ? MT.textActive : MT.textIdle}
+              size={ICON_SIZE}
+              color={isFocused ? MT.textActive : MT.textIdle}
             />
             <Text
               style={{
                 fontSize: 10,
                 fontWeight: '500',
                 letterSpacing: 0.6,
-                marginTop: 4,
-                color: isQr ? MT.brand : isFocused ? MT.textActive : MT.textIdle,
+                marginTop: 2,
+                color: isFocused ? MT.textActive : MT.textIdle,
               }}
             >
               {label}

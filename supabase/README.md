@@ -80,15 +80,25 @@ supabase db push
 Or paste the SQL into the dashboard SQL editor. Always create a new migration
 file rather than editing 001/002 — the existing ones have already been applied.
 
-## Re-deploying the edge function
+## Re-deploying edge functions
 
 ```bash
-supabase functions deploy ai-chat --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
+supabase functions deploy ai-chat     --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
+supabase functions deploy api-chat    --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
+supabase functions deploy api-session --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
+supabase functions deploy api-keys    --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
+supabase functions deploy ow-bridge   --project-ref cjflwpcxfprxxjbhjxlo --no-verify-jwt
 ```
 
-`--no-verify-jwt` is intentional: we pass `userProfile` in the request body and
-let RLS gate any client-side reads. If you want JWT verification, drop the flag
-and forward the access token from the client.
+`--no-verify-jwt` disables the **gateway**'s pre-flight JWT check; it does NOT
+disable our auth. Each function self-verifies the bearer token before doing
+anything: `ai-chat` and `ow-bridge` validate a Supabase JWT, `api-chat` accepts
+either an `gk_live_*` API key or a Gohan session JWT, `api-session` verifies
+the gym-issued JWT against `tenant_signing_secrets`. The body's `userProfile.id`
+is stripped — identity comes from the verified token only (see
+`docs/ARCHITECTURE.md` §11). The flag is set this way so we can accept multiple
+token shapes (Supabase JWT, Gohan session JWT, API key) without the gateway
+rejecting anything that isn't a Supabase JWT.
 
 ## Setting / rotating ANTHROPIC_API_KEY
 

@@ -4,6 +4,8 @@ DONT MAKE COMMITS UNLESS EXPLICITLY ASKED
 
 OUR SINGLE SOURCE OF TRUTH FOR ACRHITECTURAL DECISIONS IS /docs/ARCHITECTURE.md, all code changes must be having these architectural decisions in mind. and any architectural decisions must be consistent with this document. And changes to this document must preceed any deviations from its current state with clear explanations on why they were needed or improvements.
 
+if you are building in this project and find that we need to make changes in the architecture and thus the architecture document, and these are for better than whats currently outlined then make a MD file in a folder inside docs called architectural-changes that documents the change and the decision and has a timestamp in the md file name. sort of like migrations for the architecture document. Then you might proceed to change the architecture.md document. You are allowed to have opinions on it but we should use it as guardrails for the project.
+
 ## Project
 
 AI-powered personal trainer modules for existing gym apps. Chat with AI coach → personalized routines generated and updated in real-time. B2B multi-tenant, integrable via MCP server.
@@ -65,5 +67,12 @@ Pass header `x-no-stream: true` to get the full JSON `{content, toolCalls, routi
 ### Known quirks (plan around them)
 
 - **`order_index` gaps after delete**: `remove_exercise` does not reindex siblings, so order may go `0,1,2,3,5,6`. Sort by `order_index`; do not assume contiguous integers.
-- **`onboardingCompleted` not auto-set**: the edge function does not flip the profile flag after `create_routine`. The client should call `markOnboardingCompleted` after a successful `create_routine` SSE event (or move that into the tool handler).
 - **Tenants RLS is `authenticated`-only**: pre-login branding is not supported yet. If the demo needs it, open the policy to `anon` in a follow-up migration.
+
+### Wearables — go through `ow-bridge`
+
+Open Wearables data (steps / sleep / workouts) is fetched only via the `ow-bridge` edge function (`supabase/functions/ow-bridge/`). The OW admin credentials live as edge-function env vars (`OW_HOST`, `OW_ADMIN_USERNAME`, `OW_ADMIN_PASSWORD`, `OW_API_KEY`) — never put them in client code. `src/services/openWearables.ts` is a thin Supabase-JWT-authenticated wrapper; do not re-introduce direct calls to `OW_HOST` from the client. The mapping `(profiles.id ↔ ow_user_id)` lives in `wearables_links` (migration 009). See `docs/ARCHITECTURE.md` §14.
+
+### Open architectural questions
+
+`docs/ARCHITECTURE.md` §16 catalogues design-level decisions that are still pending (chat persistence, embedded-path realtime auth, transport singleton, etc.). Read it before making structural changes.

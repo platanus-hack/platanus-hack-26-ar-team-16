@@ -12,7 +12,6 @@ import { useFocusEffect } from 'expo-router';
 
 import { MessageList, MessageInput, CoachStylePicker } from '@/components/chat';
 import {
-  CalendarModal,
   DaySelector,
   EmptyState,
   ExerciseCard,
@@ -87,7 +86,7 @@ export function CoachChatView({ onError }: CommonProps) {
               backgroundColor: theme.primary,
             }}
           >
-            <Ionicons name="fitness" size={16} color="#FFFFFF" />
+            <Ionicons name="body" size={18} color="#FFFFFF" />
           </View>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFFFFF' }}>Gohan</Text>
         </View>
@@ -159,7 +158,6 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   const routine = useMemo(() => normalizeRoutine(rawRoutine), [rawRoutine]);
 
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
-  const [calendarVisible, setCalendarVisible] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<Exercise | null>(null);
   const [logExercise, setLogExercise] = useState<Exercise | null>(null);
   const [logVersion, setLogVersion] = useState(0);
@@ -247,7 +245,7 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   if (isLoading && !routine) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
-        <RoutineHeader selectedDay={null} onPressCalendar={() => {}} />
+        <RoutineHeader selectedDay={null} />
         <View className="px-4 mt-3 gap-3">
           {[0, 1, 2].map((i) => (
             <View key={i} className="h-24 rounded-2xl bg-zinc-900" />
@@ -260,7 +258,7 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   if (!routine || !routine.days?.length) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
-        <RoutineHeader selectedDay={null} onPressCalendar={() => setCalendarVisible(true)} />
+        <RoutineHeader selectedDay={null} />
         <EmptyState onStartChat={() => onRequestChat?.()} />
       </SafeAreaView>
     );
@@ -270,13 +268,33 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
     <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }} edges={['top']}>
       <RoutineHeader
         selectedDay={selectedDay}
-        onPressCalendar={() => setCalendarVisible(true)}
-        activeRoutineName={routine.name}
         streakDays={streak.daysTrained}
         onPressStreak={() => setStreakVisible(true)}
       />
 
       <RoutineSelector routines={routines} onSelect={handleSwitchRoutine} />
+
+      <View
+        style={{
+          backgroundColor: '#0F0F0F',
+          paddingHorizontal: 16,
+          paddingTop: 14,
+          paddingBottom: 12,
+        }}
+      >
+        <Text
+          style={{
+            color: '#fff',
+            fontSize: 24,
+            fontWeight: '800',
+            letterSpacing: 0.2,
+            lineHeight: 28,
+          }}
+          numberOfLines={2}
+        >
+          {routine.name}
+        </Text>
+      </View>
 
       <DaySelector
         days={routine.days}
@@ -353,13 +371,6 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
           </View>
         )}
       </ScrollView>
-
-      <CalendarModal
-        visible={calendarVisible}
-        days={routine.days}
-        onClose={() => setCalendarVisible(false)}
-        onSelectDay={(dayId) => setSelectedDayId(dayId)}
-      />
 
       <ExerciseDetailScreen
         exercise={selectedExercise}

@@ -1,0 +1,74 @@
+name: CI
+
+# Minimum-viable CI per docs/ARCHITECTURE.md §16.12.
+# - Typecheck the root (Expo app + src/) and each independently-deployed
+#   workspace that has its own tsconfig.
+# - Run gitleaks across the repo to catch secret regressions (e.g. the
+#   open-wearables admin creds incident referenced in §11 + §14).
+#
+# Scope is intentionally minimal: no test runner, no build, no lint
+# beyond `tsc --noEmit`. Adding tests is tracked in §16.12.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  typecheck:
+    name: typecheck (${{ matrix.workspace }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - workspace: root
+            install_dir: .
+            run_dir: .
+            command: npx tsc --noEmit
+          - workspace: mcp-server
+            install_dir: mcp-server
+            run_dir: mcp-server
+            command: npx tsc --noEmit
+          - workspace: dashboard
+            install_dir: dashboard
+            run_dir: dashboard
+            command: npx tsc --noEmit
+          - workspace: landing
+            install_dir: landing
+            run_dir: landing
+            command: npx tsc --noEmit
+          - workspace: packages/react-native-coach
+            install_dir: .
+            run_dir: packages/react-native-coach
+            command: npm run typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install (${{ matrix.workspace }})
+        working-directory: ${{ matrix.install_dir }}
+        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+      - name: Typecheck (${{ matrix.workspace }})
+        working-directory: ${{ matrix.run_dir }}
+        run: ${{ matrix.command }}
+
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        with:
+          config-path: .gitleaks.toml

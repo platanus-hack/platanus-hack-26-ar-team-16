@@ -1,0 +1,35 @@
+# Gitleaks config for Gohan AI.
+# Triggered by .github/workflows/ci.yml on every push/PR.
+# Extends the default ruleset; adds repo-specific allowlists for known
+# safe occurrences (test fixtures, anchored documentation strings).
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Repo-wide allowlist"
+paths = [
+  '''node_modules/''',
+  '''.*\.lock$''',
+  '''.*\.lockb$''',
+  '''package-lock\.json$''',
+  '''dist/''',
+  '''\.expo/''',
+  '''ios/Pods/''',
+  '''android/build/''',
+]
+
+# The OW admin creds incident: leave a regex so the scanner flags any
+# *re-introduction*. The current literal in src/services/openWearables.ts
+# is tracked in docs/tech-debt.md and replaced by ow-bridge in §14.
+[[rules]]
+id = "ow-admin-credentials"
+description = "Open Wearables admin credentials must not be committed"
+regex = '''(GohanAdmin\d{4}!|admin@admin\.com)'''
+# tech-debt.md is allowed to *describe* the incident.
+[rules.allowlist]
+paths = [
+  '''docs/tech-debt\.md$''',
+  '''docs/ARCHITECTURE\.md$''',
+  '''\.gitleaks\.toml$''',
+]

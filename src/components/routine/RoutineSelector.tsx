@@ -14,7 +14,10 @@ export function RoutineSelector({ routines, onSelect }: RoutineSelectorProps) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.section}>RUTINAS</Text>
+      <View style={styles.sectionRow}>
+        <Ionicons name="layers-outline" size={12} color="#777" />
+        <Text style={styles.section}>RUTINAS</Text>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -29,18 +32,20 @@ export function RoutineSelector({ routines, onSelect }: RoutineSelectorProps) {
               accessibilityRole="button"
               accessibilityLabel={`Cambiar a rutina ${r.name}`}
               accessibilityState={{ selected: isActive }}
-              style={[styles.card, isActive && styles.cardActive]}
+              style={({ pressed }) => [
+                styles.chip,
+                isActive ? styles.chipActive : styles.chipIdle,
+                pressed && !isActive && { opacity: 0.7 },
+              ]}
             >
-              {isActive && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={14}
-                  color="#000"
-                  style={{ marginRight: 6 }}
-                />
-              )}
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: isActive ? '#000' : '#FF6B00' },
+                ]}
+              />
               <Text
-                style={[styles.cardText, isActive && styles.cardTextActive]}
+                style={[styles.chipText, isActive && styles.chipTextActive]}
                 numberOfLines={1}
               >
                 {r.name}
@@ -55,42 +60,58 @@ export function RoutineSelector({ routines, onSelect }: RoutineSelectorProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    paddingTop: 4,
-    paddingBottom: 6,
+    backgroundColor: '#0F0F0F',
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    marginBottom: 8,
   },
   section: {
     fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-    color: '#666',
+    fontWeight: '700',
+    letterSpacing: 1.6,
+    color: '#777',
     textTransform: 'uppercase',
-    paddingHorizontal: 16,
-    marginBottom: 6,
   },
   scroll: {
     paddingHorizontal: 16,
     gap: 8,
   },
-  card: {
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderRadius: 999,
-    backgroundColor: '#1A1A1A',
     borderWidth: 1,
+  },
+  chipIdle: {
+    backgroundColor: '#0F0F0F',
     borderColor: '#262626',
   },
-  cardActive: {
+  chipActive: {
     backgroundColor: '#FF6B00',
     borderColor: '#FF6B00',
   },
-  cardText: {
-    color: '#fff',
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  chipText: {
+    color: '#D4D4D4',
     fontSize: 13,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
-  cardTextActive: {
+  chipTextActive: {
     color: '#000',
+    fontWeight: '800',
   },
 });
