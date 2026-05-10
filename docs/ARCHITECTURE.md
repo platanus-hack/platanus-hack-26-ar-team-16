@@ -43,32 +43,116 @@ Both surfaces hit the **same backend, same `profiles` table, same auth model** �
 ## 3. Repository Layout
 
 ```
-app/                         Expo Router screens (auth-gated)
+app/                         Expo Router screens (standalone shell only — excluded from npm bundle)
   _layout.tsx                Root guard + auth state propagation
   (auth)/login.tsx
   (tabs)/                    coach, routine, qr, mas, index
+  +html.tsx                  Web HTML head shim
   routine/[day].tsx          Detail view (placeholder)
 
-src/
-  components/                chat / routine / ui primitives
-  hooks/                     useRealtimeRoutine, useAudioRecorder, useSpeechRecognition
-  modules/                   chat (ChatManager) / ai (DEAD — see §13) / routine
-  services/                  supabase client, auth, profiles, tenant, routines, conversations
-  store/                     useAuthStore, useTenantStore, useRoutineStore, useChatStore
+src/                         Shared code — physically present, transitively bundled
+  components/                chat / routine / ui primitives + GohanCoach root
+  hooks/                     useRealtimeRoutine, useAudioRecorder, useSpeechRecognition, useOpenWearables
+  modules/                   chat (ChatManager) / json-render / routine
+  services/                  supabase client, auth, profiles, tenant, routines, conversations,
+                             api/ (CoachConfig + ApiClient), openWearables (TD-1)
+  store/                     useAuthStore, useTenantStore, useRoutineStore, useChatStore, useCoachStyleStore
   theme/                     colors, tokens, useTheme, tenants/megatlon
-  types/                     contracts (chat, routine, tenant, user, database)
+  types/                     contracts (chat, routine, tenant, user, database, coach)
 
 supabase/
-  functions/ai-chat/         Edge function (Deno) — Claude tool loop + DB writes
-  migrations/                001 schema → 003 realtime
+  functions/_shared/         chat-handler.ts (system prompt + tool loop), jwt.ts (verification)
+  functions/ai-chat/         Legacy session-JWT entry (thin shim → _shared/chat-handler)
+  functions/api-chat/        B2B API-key + external-id entry
+  functions/api-session/     Gym JWT → Gohan session token + realtime_jwt
+  functions/api-keys/        Issue / list / revoke tenant API keys
+  migrations/                001 schema → 005 external identity + tenant scoping + api keys
   seed_megatlon_tenant.sql
 
-mcp-server/                  Stdio MCP server (TS, separate package)
-landing/                     Next.js marketing site
-documentation/               this folder
+mcp-server/                  Hosted MCP server (Node/TS) — HTTP transport with API-key auth + stdio fallback
+packages/                    npm-publishable workspaces
+  react-native/              @gohan-ai/react-native (embeddable Coach module, tsup-built)
+dashboard/                   Next.js B2B dashboard (gym-operator console)
+landing/                     Next.js marketing site (gohan.ai) + /mcp docs page
+docs/                        ARCHITECTURE, PLAN, auth-external-identity, tech-debt
 ```
 
 Module ownership (per `CLAUDE.md:27–32`): @thblu (routine), @alexndr-n (chat/UI/nav), @DanteDia (services/supabase/types), @Juampiman (AI/MCP).
+
+---
+
+### 3.1 Service Topology
+
+The repo holds **eight independently deployed processes/artifacts** plus one third-party dependency. Each has its own runtime, build pipeline, and host. They are not co-deployed: any one of them can be redeployed without rebuilding the others.
+
+| # | Process / Artifact | Runtime | Source | Build | Deploy target | Talks to (out) | Receives from (in) |
+|---|---|---|---|---|---|---|---|
+| 1 | **Mobile app (standalone)** | iOS / Android via Hermes; web via `react-native-web` | `app/`, `src/`, `assets/` | `eas build` (native) / `expo start --web` (web) | App Store, Play Store, Vercel (web preview) | edge functions (HTTPS), Realtime (WSS), OW backend (HTTPS — TD-1) | end users |
+| 2 | **Embeddable npm module** | host app's RN runtime | `packages/react-native/`, transitively `src/components`, `src/modules`, `src/services/api`, `src/store`, `src/theme`, `src/hooks` (only what `<GohanCoach />` imports) | `tsup` ESM+CJS | `@gohan-ai/react-native` on npm | edge functions via injected `ApiClient` | gym apps embedding `<GohanCoach />` |
+| 3 | **Edge functions** | Deno (Supabase) | `supabase/functions/` | `supabase functions deploy <name>` | Supabase platform `*.functions.supabase.co` | Postgres (admin), Anthropic API | mobile app, npm module hosts, MCP server (indirectly), dashboard |
+| 4 | **Postgres + Realtime** | Supabase managed | `supabase/migrations/` | `supabase db push` | Supabase project `gohan-ai` (sa-east-1) | (none — system of record) | edge functions, MCP server, dashboard, Realtime subscribers |
+| 5 | **MCP server** | Node.js (target: Docker) | `mcp-server/` (separate `package.json` + `tsconfig`) | `tsc` → `dist/` (today); `tsup` + Docker (target) | fly.io / Deno Deploy at `mcp.gohan.ai` (target) | Postgres (admin) | gym backends + LLM agents over HTTP/JSON-RPC, local dev tooling over stdio |
+| 6 | **Dashboard** | Node.js / Next.js | `dashboard/` (separate `package.json` + `tsconfig`) | `next build` | Vercel at `dashboard.gohan.ai` | Postgres (RLS-scoped reads), edge functions (api-keys) | gym operators |
+| 7 | **Landing site** | Node.js / Next.js | `landing/` | `next build` | Vercel at `gohan.ai` | (static + minimal API) | public visitors, MCP docs readers at `/mcp` |
+| 8 | **Open Wearables backend** *(third-party, not in this repo)* | (their stack) | external | external | (their host) | Postgres (theirs) | mobile app directly today (TD-1); should be edge function `ow-bridge` |
+
+#### Topology diagram
+
+```
+                                                      ┌──────────────────────────────┐
+                                                      │      End users (browsers,    │
+                                                      │      iOS/Android devices)    │
+                                                      └──────┬──────────────┬────────┘
+                                                             │              │
+                                                             ▼              ▼
+                                                  ┌────────────────┐  ┌─────────────────┐
+                                                  │  Mobile app    │  │ Landing (Vercel)│
+                                                  │  (standalone)  │  │   gohan.ai      │
+                                                  │  iOS / Android │  └─────────────────┘
+                                                  │  / Web         │
+                                                  └────┬───────────┘
+                            ┌──────────────────────────┤
+                            │            │             │           │
+                            ▼            ▼             ▼           ▼
+                  ┌────────────┐ ┌─────────────┐ ┌─────────┐ ┌─────────────────┐
+                  │ ai-chat    │ │ api-session │ │api-chat │ │ Open Wearables  │
+                  │ (Deno edge)│ │ (Deno edge) │ │(Deno    │ │ backend (3rd-   │
+                  │            │ │             │ │ edge)   │ │ party, TD-1)    │
+                  └─────┬──────┘ └──────┬──────┘ └────┬────┘ └─────────────────┘
+                        │               │             │
+                        ▼               ▼             ▼
+                                ┌──────────────────┐
+                                │   Postgres       │
+                                │   + Realtime     │◀──── Mobile app subscribes (WSS)
+                                │   (Supabase)     │
+                                └──────────────────┘
+                                  ▲             ▲
+                                  │             │
+              ┌───────────────────┘             └─────────────────┐
+              │                                                   │
+   ┌────────────────┐                                  ┌──────────────────────┐
+   │  MCP server    │◀─── Gym backends + LLM agents    │ Dashboard (Vercel)   │
+   │ mcp.gohan.ai   │     (HTTP/JSON-RPC + API key)    │ dashboard.gohan.ai   │◀── Gym operators
+   │  (Node)        │                                  │   (Next.js)          │
+   └────────────────┘                                  └──────────────────────┘
+
+   ┌──────────────────────────────────────────────────────────────────────────┐
+   │  Embeddable npm module (@gohan-ai/react-native)                          │
+   │  Built from packages/react-native + transitive src/* (single entrypoint  │
+   │  <GohanCoach />). Consumed by gym apps; talks to api-chat / api-session  │
+   │  via injected ApiClient. NOT a running process — bundled into the host.  │
+   └──────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Code-vs-process boundary (clarification)
+
+A common point of confusion: "if `src/` is shared between the standalone app and the embeddable module, why isn't `openWearables.ts` in the module?" Sharing is **transitive from the entrypoint**, not whole-directory.
+
+- The embeddable module has a single ESM entrypoint, `<GohanCoach />`. `tsup` walks the import graph from there. Anything not reachable is tree-shaken out.
+- `openWearables.ts` is reachable only from `app/(tabs)/mas.tsx`. The `app/` tree is excluded from the module bundle (it's the standalone shell, not the embeddable surface).
+- Therefore: the file exists in `src/services/`, ships in the standalone app, does not ship in the npm module.
+
+This is **fragile**. The day a component reachable from `<GohanCoach />` imports `useOpenWearables` (e.g., a future shared "stats" panel), the wearables service — and its bundled admin creds — silently leaks into the embedded module. The fix is not file relocation; it's TD-1 (move the auth to `ow-bridge` so the client code is safe to ship anywhere).
 
 ---
 
