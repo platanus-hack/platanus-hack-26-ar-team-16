@@ -7,11 +7,32 @@ import { Eyebrow } from "./primitives";
 // account on first paint, so iframe visitors skip the login screen.
 const APP_URL = "https://gohan-app-theta.vercel.app/?autoLogin=demo";
 
+// iPhone 13 logical viewport — 390 × 844 CSS pixels. We lock the desktop
+// stage to these exact dimensions so the demo feels like a real device on
+// the page; mobile keeps its full-bleed behavior so phone visitors get the
+// app at native viewport size.
+const IPHONE_W = 390;
+const IPHONE_H = 844;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    mql.addEventListener("change", update);
+    return () => mql.removeEventListener("change", update);
+  }, []);
+  return isMobile;
+}
+
 export function ScrollPhone() {
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
   const [interactive, setInteractive] = useState(false);
+  const isMobile = useIsMobile();
 
   // Scroll-driven progress with rAF — this is the cross-browser path.
   // Modern browsers ALSO get the CSS animation-timeline declared in globals.css,
@@ -57,15 +78,16 @@ export function ScrollPhone() {
   // Tell the rest of the chrome (Nav, ScrollProgress) when the phone fully
   // owns the viewport. They fade out via [data-phone-fullscreen] selector
   // so the user sees the live app without a translucent nav strip eating
-  // the megatlon header.
+  // the megatlon header. Only kicks in on mobile now — on desktop the phone
+  // is locked to iPhone 13 size, so the nav can keep its place beside it.
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.dataset.phoneFullscreen =
-      progress > 0.72 ? "1" : "0";
+      isMobile && progress > 0.72 ? "1" : "0";
     return () => {
       delete document.documentElement.dataset.phoneFullscreen;
     };
-  }, [progress]);
+  }, [progress, isMobile]);
 
   // Map progress 0..1 into a phone scale 0.7 .. 1 and a corner radius
   // 2.75rem .. 0.4rem (some rounding stays even at full-bleed for charm).
@@ -109,24 +131,29 @@ export function ScrollPhone() {
           }`}
         >
           {/* Phone frame.
-              At full bleed (scale > 0.95) the frame jumps to 100vw/100vh so
-              it sits flush with the viewport edges — otherwise on mobile the
-              `min(380px, 92vw)` cap leaves an 8vw border that looks broken
-              when the iframe should already feel like the page itself. */}
+              Desktop: locked to iPhone 13 logical 390x844, regardless of
+              expansion. The scale 0.7→1.0 animation still runs but the
+              underlying box never leaves iPhone proportions, so it always
+              looks like a real device on the page.
+              Mobile: at full bleed (scale > 0.95) the frame jumps to
+              100vw/100vh so phone visitors see the app at native size. */}
           <div
             ref={stageRef}
             className="phone-stage relative origin-center transition-[box-shadow] duration-300"
             style={{
               transform: `scale(${scale})`,
               borderRadius: `${radius}rem`,
-              width: scale > 0.95 ? "100vw" : "min(380px, 92vw)",
-              height: scale > 0.95 ? "100vh" : "min(820px, 92vh)",
-              background: "var(--color-ink)",
-              padding: scale > 0.95 ? "0" : "0.6rem",
+              width: isMobile && scale > 0.95 ? "100vw" : `${IPHONE_W}px`,
+              height: isMobile && scale > 0.95 ? "100vh" : `${IPHONE_H}px`,
+              background:
+                isMobile && scale > 0.95
+                  ? "var(--color-ink)"
+                  : "linear-gradient(155deg, #1c1c1e 0%, #050505 50%, #1c1c1e 100%)",
+              padding: isMobile && scale > 0.95 ? "0" : "12px",
               boxShadow:
-                scale > 0.95
+                isMobile && scale > 0.95
                   ? "0 0 0 0 transparent"
-                  : "0 30px 80px -20px rgba(0,0,0,0.45), 0 10px 30px -10px rgba(0,0,0,0.25)",
+                  : "0 0 0 1.5px #2a2a2a, inset 0 0 0 0.5px rgba(255,255,255,0.04), 0 30px 80px -20px rgba(0,0,0,0.45), 0 10px 30px -10px rgba(0,0,0,0.25)",
             }}
           >
             {/* iframe = the real app */}
@@ -141,15 +168,46 @@ export function ScrollPhone() {
               allow="microphone"
             />
 
-            {/* Phone notch — fades out as the phone fills the viewport */}
-            <div
-              aria-hidden
-              className="absolute top-2 left-1/2 -translate-x-1/2 h-6 rounded-b-2xl bg-[var(--color-ink)] transition-opacity duration-300"
-              style={{
-                width: scale < 0.95 ? "5.5rem" : "0",
-                opacity: scale < 0.95 ? 1 : 0,
-              }}
-            />
+            {/* Dynamic-Island-style notch. Centered, slightly below the
+                top edge, with a subtle camera dot. Hidden in full-bleed
+                mobile mode (we're already inside a real device). */}
+            {!(isMobile && scale > 0.95) && (
+              <div
+                aria-hidden
+                className="absolute top-[10px] left-1/2 -translate-x-1/2 z-10 h-[26px] w-[110px] rounded-full bg-black flex items-center justify-end pr-2 transition-opacity duration-300"
+                style={{ opacity: scale < 0.95 ? 1 : 0.92 }}
+              >
+                <span className="w-[7px] h-[7px] rounded-full bg-[#0c0c0c] ring-1 ring-[#1d1d1f]" />
+              </div>
+            )}
+
+            {/* Side buttons. Thin metallic strips that protrude a hair from
+                the frame — cheap detail that reads as iPhone instantly.
+                Hidden in mobile full-bleed since there's no frame anymore. */}
+            {!(isMobile && scale > 0.95) && (
+              <>
+                {/* silent / mute switch (top-left) */}
+                <span
+                  aria-hidden
+                  className="absolute -left-[2px] top-[100px] w-[2px] h-[28px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                />
+                {/* volume up */}
+                <span
+                  aria-hidden
+                  className="absolute -left-[2px] top-[150px] w-[2px] h-[52px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                />
+                {/* volume down */}
+                <span
+                  aria-hidden
+                  className="absolute -left-[2px] top-[212px] w-[2px] h-[52px] rounded-l-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                />
+                {/* power / wake (right side) */}
+                <span
+                  aria-hidden
+                  className="absolute -right-[2px] top-[140px] w-[2px] h-[80px] rounded-r-md bg-gradient-to-b from-[#2a2a2a] to-[#0e0e0e]"
+                />
+              </>
+            )}
           </div>
 
           {/* Caption tracking the expansion progress */}
