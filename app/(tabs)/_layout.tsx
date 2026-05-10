@@ -85,7 +85,13 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             accessibilityRole="button"
             accessibilityState={{ selected: isFocused }}
             accessibilityLabel={label}
-            style={{ flex: 1, alignItems: 'center', paddingTop: 8 }}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingTop: 8,
+              // @ts-expect-error web-only: suppress browser default focus ring
+              outline: 'none',
+            }}
           >
             {isFocused ? (
               <View
