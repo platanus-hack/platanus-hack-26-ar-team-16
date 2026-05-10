@@ -1,6 +1,8 @@
+import { Platform } from 'react-native';
 import { supabase } from './supabase';
 
-const OW_HOST = process.env.EXPO_PUBLIC_OW_HOST ?? 'http://localhost:8000';
+const rawHost = process.env.EXPO_PUBLIC_OW_HOST ?? 'http://localhost:8000';
+const OW_HOST = Platform.OS === 'android' ? rawHost.replace('localhost', '10.0.2.2') : rawHost;
 const OW_API_KEY = process.env.EXPO_PUBLIC_OW_API_KEY ?? '';
 
 let initialized = false;
@@ -20,7 +22,8 @@ async function ensureOWUser(adminToken: string, email: string, name: string): Pr
   const listRes = await fetch(`${OW_HOST}/api/v1/users`, {
     headers: { Authorization: `Bearer ${adminToken}` },
   });
-  const users = await listRes.json();
+  const data = await listRes.json();
+  const users = data.items ?? data;
   const existing = users.find((u: { email: string }) => u.email === email);
   if (existing) return existing.id;
 
@@ -62,38 +65,93 @@ export async function syncNow(): Promise<void> {
 }
 
 export interface OWActivitySummary {
+  date: string;
   steps: number | null;
-  active_calories: number | null;
-  total_calories: number | null;
   distance_meters: number | null;
+  active_calories_kcal: number | null;
+  total_calories_kcal: number | null;
+  active_minutes: number | null;
+  heart_rate: {
+    avg_bpm: number | null;
+    max_bpm: number | null;
+    min_bpm: number | null;
+  } | null;
 }
 
 export interface OWSleepSummary {
-  total_sleep_minutes: number | null;
-  deep_sleep_minutes: number | null;
-  rem_sleep_minutes: number | null;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  duration_minutes: number | null;
+  efficiency_percent: number | null;
+  stages: {
+    awake_minutes: number;
+    light_minutes: number;
+    deep_minutes: number;
+    rem_minutes: number;
+  } | null;
+}
+
+export interface OWWorkout {
+  id: string;
+  type: string;
+  start_time: string;
+  end_time: string;
+  duration_seconds: number;
+  calories_kcal: number | null;
+  avg_heart_rate_bpm: number | null;
+  max_heart_rate_bpm: number | null;
+}
+
+function todayRange(): { start_date: string; end_date: string } {
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  return { start_date: today, end_date: tomorrow };
 }
 
 export async function getActivitySummary(date?: string): Promise<OWActivitySummary | null> {
   if (!owUserId) return null;
   const adminToken = await getAdminToken();
-  const d = date ?? new Date().toISOString().split('T')[0];
-  const res = await fetch(`${OW_HOST}/api/v1/users/${owUserId}/summaries/activity?date=${d}`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-  });
+  const { start_date, end_date } = date
+    ? { start_date: date, end_date: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0] }
+    : todayRange();
+  const res = await fetch(
+    `${OW_HOST}/api/v1/users/${owUserId}/summaries/activity?start_date=${start_date}&end_date=${end_date}`,
+    { headers: { Authorization: `Bearer ${adminToken}` } },
+  );
   if (!res.ok) return null;
-  return res.json();
+  const body = await res.json();
+  return body.data?.[0] ?? null;
 }
 
 export async function getSleepSummary(date?: string): Promise<OWSleepSummary | null> {
   if (!owUserId) return null;
   const adminToken = await getAdminToken();
-  const d = date ?? new Date().toISOString().split('T')[0];
-  const res = await fetch(`${OW_HOST}/api/v1/users/${owUserId}/summaries/sleep?date=${d}`, {
-    headers: { Authorization: `Bearer ${adminToken}` },
-  });
+  const { start_date, end_date } = date
+    ? { start_date: new Date(new Date(date).getTime() - 86400000).toISOString().split('T')[0], end_date: date }
+    : todayRange();
+  const res = await fetch(
+    `${OW_HOST}/api/v1/users/${owUserId}/summaries/sleep?start_date=${start_date}&end_date=${end_date}`,
+    { headers: { Authorization: `Bearer ${adminToken}` } },
+  );
   if (!res.ok) return null;
-  return res.json();
+  const body = await res.json();
+  return body.data?.[0] ?? null;
+}
+
+export async function getWorkouts(date?: string): Promise<OWWorkout[]> {
+  if (!owUserId) return [];
+  const adminToken = await getAdminToken();
+  const { start_date, end_date } = date
+    ? { start_date: date, end_date: new Date(new Date(date).getTime() + 86400000).toISOString().split('T')[0] }
+    : todayRange();
+  const res = await fetch(
+    `${OW_HOST}/api/v1/users/${owUserId}/events/workouts?start_date=${start_date}&end_date=${end_date}`,
+    { headers: { Authorization: `Bearer ${adminToken}` } },
+  );
+  if (!res.ok) return [];
+  const body = await res.json();
+  return body.data ?? [];
 }
 
 export function isInitialized(): boolean {
