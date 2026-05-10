@@ -25,6 +25,22 @@ const MONTHS_ES = [
 ];
 const DOW_LABELS = ['L','M','M','J','V','S','D'];
 
+const WORKOUT_DOT_COLOR: Record<string, string> = {
+  push: '#FF6B00',
+  pull: '#3B82F6',
+  legs: '#10B981',
+  cardio: '#A855F7',
+};
+const DOT_LEGEND = [
+  { color: '#FF6B00', label: 'Push' },
+  { color: '#3B82F6', label: 'Pull' },
+  { color: '#10B981', label: 'Legs' },
+  { color: '#A855F7', label: 'Cardio' },
+];
+function getDotColor(badgeName: string): string {
+  return WORKOUT_DOT_COLOR[badgeName.toLowerCase()] ?? '#FF6B00';
+}
+
 interface CalCell {
   date: number | null;
   type: 'empty' | 'done' | 'scheduled' | 'rest' | 'today-done' | 'today-scheduled' | 'today-rest';
@@ -122,8 +138,19 @@ export function CalendarModal({ visible, onClose, days, onSelectDay }: CalendarM
       <SafeAreaView style={styles.screen} edges={['top', 'bottom']}>
         {/* Header */}
         <View style={styles.hdr}>
-          <Pressable onPress={onClose} style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+          <Pressable
+            onPress={onClose}
+            style={({ pressed }) => ({
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: '#1A1A1A',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Ionicons name="chevron-back" size={20} color="#FFFFFF" />
           </Pressable>
           <Text style={styles.hdrTitle}>{monthLabel.toUpperCase()}</Text>
           <View style={{ width: 22 }} />
@@ -163,19 +190,10 @@ export function CalendarModal({ visible, onClose, days, onSelectDay }: CalendarM
                     style={[styles.cell, isToday && styles.cellToday]}
                   >
                     <Text style={[styles.cellNum, isToday && styles.cellNumToday]}>{cell.date}</Text>
-                    {cell.badge !== '·' ? (
-                      <View style={[
-                        styles.badge,
-                        isDone && styles.badgeDone,
-                        isScheduled && styles.badgeScheduled,
-                      ]}>
-                        <Text style={[styles.badgeText, isDone && styles.badgeTextDone]} numberOfLines={1}>
-                          {cell.badge}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.restDot}>·</Text>
-                    )}
+                    <View style={[
+                      styles.dot,
+                      cell.badge !== '·' && { backgroundColor: getDotColor(cell.badge) },
+                    ]} />
                   </Pressable>
                 );
               })}
@@ -184,18 +202,12 @@ export function CalendarModal({ visible, onClose, days, onSelectDay }: CalendarM
 
           {/* Legend */}
           <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: '#FF6B00' }]} />
-              <Text style={styles.legendLabel}>Entrenado</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: 'rgba(255,107,0,0.15)', borderWidth: 1, borderColor: 'rgba(255,107,0,0.3)' }]} />
-              <Text style={styles.legendLabel}>Programado</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendSwatch, { backgroundColor: '#0f0f0f' }]} />
-              <Text style={styles.legendLabel}>Descanso</Text>
-            </View>
+            {DOT_LEGEND.map((item) => (
+              <View key={item.label} style={styles.legendItem}>
+                <View style={[styles.legendSwatch, { backgroundColor: item.color }]} />
+                <Text style={styles.legendLabel}>{item.label}</Text>
+              </View>
+            ))}
           </View>
 
           {/* Summary */}
@@ -289,30 +301,11 @@ const styles = StyleSheet.create({
   cellNumToday: {
     color: '#fff',
   },
-  badge: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,107,0,0.15)',
-  },
-  badgeDone: {
-    backgroundColor: '#FF6B00',
-  },
-  badgeScheduled: {
-    backgroundColor: 'rgba(255,107,0,0.15)',
-  },
-  badgeText: {
-    fontSize: 8,
-    fontWeight: '700',
-    color: 'rgba(255,107,0,0.7)',
-    letterSpacing: 0.3,
-  },
-  badgeTextDone: {
-    color: '#fff',
-  },
-  restDot: {
-    fontSize: 12,
-    color: '#444',
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'transparent',
   },
   legend: {
     flexDirection: 'row',
@@ -326,8 +319,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   legendSwatch: {
-    width: 14,
-    height: 14,
+    width: 8,
+    height: 8,
     borderRadius: 4,
   },
   legendLabel: {
