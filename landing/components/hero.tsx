@@ -1,4 +1,4 @@
-import { Arrow, Eyebrow } from "./primitives";
+import { Eyebrow } from "./primitives";
 import { HeroBackdrop } from "./hero-backdrop";
 import { Reveal } from "./reveal";
 import { Magnetic } from "./interactions";
@@ -35,27 +35,23 @@ export function Hero() {
             delay={820}
             className="md:col-span-5 md:col-start-9 self-end"
           >
-            <div className="flex flex-col gap-3">
-              <Magnetic>
+            {/* Apple-style pill CTAs. Centered text, compact on mobile, no
+                trailing arrow — the buttons read as a pair of bubbles. */}
+            <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 items-center md:items-stretch">
+              <Magnetic className="w-full sm:w-auto md:w-full">
                 <a
                   href="#contact"
-                  className="btn-shine inline-flex items-center justify-between w-full px-6 py-4 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-flame)] transition-colors group"
+                  className="btn-shine inline-flex items-center justify-center w-full px-5 py-3 rounded-full bg-[var(--color-ink)] text-[var(--color-paper)] text-[14px] font-medium tracking-tight hover:bg-[var(--color-flame)] transition-colors"
                 >
-                  <span className="font-medium text-[15px]">
-                    Book a 15-min walkthrough
-                  </span>
-                  <Arrow className="ml-4" />
+                  Book a 15-min walkthrough
                 </a>
               </Magnetic>
-              <Magnetic>
+              <Magnetic className="w-full sm:w-auto md:w-full">
                 <a
                   href="#try"
-                  className="btn-shine inline-flex items-center justify-between w-full px-6 py-4 rounded-full border border-[var(--color-ink)]/15 hover:border-[var(--color-ink)] transition-colors group"
+                  className="btn-shine inline-flex items-center justify-center w-full px-5 py-3 rounded-full bg-[color-mix(in_srgb,var(--color-ink)_6%,transparent)] backdrop-blur-md text-[var(--color-ink)] text-[14px] font-medium tracking-tight border border-[var(--color-ink)]/10 hover:bg-[color-mix(in_srgb,var(--color-ink)_10%,transparent)] hover:border-[var(--color-ink)]/20 transition-colors"
                 >
-                  <span className="font-medium text-[15px]">
-                    Try the live demo
-                  </span>
-                  <Arrow className="ml-4" />
+                  Try the live demo
                 </a>
               </Magnetic>
             </div>

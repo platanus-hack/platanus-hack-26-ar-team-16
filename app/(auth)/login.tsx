@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   Image,
   ScrollView,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
-import { ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useTheme } from '@/theme';
@@ -16,6 +16,16 @@ import { signInWithEmail, signInWithGoogle, signUpWithEmail } from '@/services';
 import { toast } from '@/store';
 
 type Mode = 'login' | 'register';
+
+const DEMO_EMAIL = 'demo@gohan.ai';
+const DEMO_PASSWORD = 'GohanDemo2026!';
+
+// Web-only: the landing iframe loads `${APP_URL}?autoLogin=demo` so
+// visitors land on the home tab without ever seeing the login form.
+function shouldAutoLogin() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('autoLogin') === 'demo';
+}
 
 export default function LoginScreen() {
   const [mode, setMode] = useState<Mode>('login');
@@ -25,9 +35,19 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [autoLoginActive] = useState(shouldAutoLogin);
+  const autoTriggered = useRef(false);
   const theme = useTheme();
 
   const isRegister = mode === 'register';
+
+  useEffect(() => {
+    if (!autoLoginActive || autoTriggered.current) return;
+    autoTriggered.current = true;
+    void signInWithEmail(DEMO_EMAIL, DEMO_PASSWORD).then(({ error: authError }) => {
+      if (authError) setError(authError.message);
+    });
+  }, [autoLoginActive]);
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -109,6 +129,25 @@ export default function LoginScreen() {
     setConfirmPassword('');
     setMode((prev) => (prev === 'login' ? 'register' : 'login'));
   };
+
+  if (autoLoginActive) {
+    return (
+      <View
+        className={`flex-1 items-center justify-center ${theme.tenant.classNames.pageBg}`}
+        style={{ gap: 16 }}
+      >
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text className={`text-sm ${theme.tenant.classNames.textMuted}`}>
+          Cargando demo…
+        </Text>
+        {error && (
+          <Text className="text-sm px-6 text-center" style={{ color: theme.tenant.colors.danger }}>
+            {error}
+          </Text>
+        )}
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

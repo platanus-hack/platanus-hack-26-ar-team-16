@@ -1,6 +1,5 @@
 import "../global.css";
 import { useEffect } from "react";
-import { Platform } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useAuthStore, useTenantStore } from "@/store";
@@ -9,7 +8,6 @@ import {
   getProfile,
   getTenantById,
   onAuthStateChange,
-  signInWithEmail,
 } from "@/services";
 
 function useProtectedRoute() {
@@ -46,27 +44,6 @@ function useProtectedRoute() {
   }, [isAuthenticated, segments, isLoading, user]);
 }
 
-// Web-only: visiting with ?demo=1 auto-signs into the demo account so the
-// landing's "Ver demo" button drops the visitor straight into the Megatlon
-// shell. The password is intentionally hardcoded — this account is public,
-// scoped to its own data via RLS, and exists only for live demos.
-function useDemoAutoLogin() {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isLoading = useAuthStore((s) => s.isLoading);
-
-  useEffect(() => {
-    if (Platform.OS !== "web") return;
-    if (typeof window === "undefined") return;
-    if (isLoading || isAuthenticated) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("demo") !== "1") return;
-    signInWithEmail("demo@gohan.ai", "GohanDemo2026!").catch((e) =>
-      // eslint-disable-next-line no-console
-      console.warn("[demo] auto-login failed", e),
-    );
-  }, [isAuthenticated, isLoading]);
-}
-
 export default function RootLayout() {
   const setUser = useAuthStore((s) => s.setUser);
   const setLoading = useAuthStore((s) => s.setLoading);
@@ -101,7 +78,6 @@ export default function RootLayout() {
     return unsubscribe;
   }, []);
 
-  useDemoAutoLogin();
   useProtectedRoute();
 
   return (

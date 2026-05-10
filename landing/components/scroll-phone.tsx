@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Eyebrow } from "./primitives";
 
-const APP_URL = "https://gohan-app-theta.vercel.app";
+// `?autoLogin=demo` makes the embedded app sign in as the seeded demo
+// account on first paint, so iframe visitors skip the login screen.
+const APP_URL = "https://gohan-app-theta.vercel.app/?autoLogin=demo";
 
 export function ScrollPhone() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -88,19 +90,10 @@ export function ScrollPhone() {
             </span>
           </h2>
           <p className="mt-8 text-lg text-[var(--color-mute)] max-w-xl leading-relaxed">
-            Below is the real product, not a video. Sign in with the demo
-            account and chat with the coach. The routine you see updates in
-            real-time as the AI rewrites it.
+            Below is the real product, not a video. The demo account is already
+            signed in — tap inside, chat with the coach, watch the routine
+            rewrite itself in real-time.
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3 font-mono text-xs text-[var(--color-mute)]">
-            <span className="px-3 py-1.5 rounded-full bg-[var(--color-paper)] border border-[var(--color-ink)]/10">
-              demo@gohan.ai
-            </span>
-            <span className="opacity-50">·</span>
-            <span className="px-3 py-1.5 rounded-full bg-[var(--color-paper)] border border-[var(--color-ink)]/10">
-              GohanDemo2026!
-            </span>
-          </div>
         </div>
       </div>
 
@@ -115,15 +108,19 @@ export function ScrollPhone() {
             interactive ? "iframe-locked" : ""
           }`}
         >
-          {/* Phone frame */}
+          {/* Phone frame.
+              At full bleed (scale > 0.95) the frame jumps to 100vw/100vh so
+              it sits flush with the viewport edges — otherwise on mobile the
+              `min(380px, 92vw)` cap leaves an 8vw border that looks broken
+              when the iframe should already feel like the page itself. */}
           <div
             ref={stageRef}
             className="phone-stage relative origin-center transition-[box-shadow] duration-300"
             style={{
               transform: `scale(${scale})`,
               borderRadius: `${radius}rem`,
-              width: "min(380px, 92vw)",
-              height: "min(820px, 92vh)",
+              width: scale > 0.95 ? "100vw" : "min(380px, 92vw)",
+              height: scale > 0.95 ? "100vh" : "min(820px, 92vh)",
               background: "var(--color-ink)",
               padding: scale > 0.95 ? "0" : "0.6rem",
               boxShadow:
