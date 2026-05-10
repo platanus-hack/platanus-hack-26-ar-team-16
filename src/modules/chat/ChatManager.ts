@@ -1,9 +1,15 @@
-import { useAuthStore, useChatStore, useCoachStyleStore, toast } from '@/store';
+import { useAuthStore, useChatStore, useCoachStyleStore, useRoutineStore, toast } from '@/store';
 import type { ApiClient, ChatMessage } from '@/types';
 import { buildConversationHistory, streamChat } from '@/services/api';
 import type { ChatRequest } from '@/services/api';
 import { markOnboardingCompleted } from '@/services';
+import { getActiveRoutine, listUserRoutines } from '@/services/routines';
 import { createApiClient } from '@/services/api/client';
+
+const ROUTINE_MUTATING_TOOLS = new Set([
+  'create_routine', 'update_exercise', 'replace_exercise',
+  'add_exercise', 'remove_exercise', 'switch_routine', 'delete_routine',
+]);
 
 const MOCK_CONVERSATION_ID = 'mock-conversation';
 
@@ -153,6 +159,18 @@ export async function sendUserMessage(
             toast.success('Ejercicio agregado');
           } else if (toolName === 'remove_exercise') {
             toast.info('Ejercicio eliminado');
+          }
+
+          if (ROUTINE_MUTATING_TOOLS.has(toolName)) {
+            const userId = useAuthStore.getState().user?.id;
+            if (userId) {
+              Promise.all([getActiveRoutine(userId), listUserRoutines(userId)])
+                .then(([routine, routines]) => {
+                  useRoutineStore.getState().setRoutine(routine);
+                  useRoutineStore.getState().setRoutines(routines);
+                })
+                .catch(() => {});
+            }
           }
         } else {
           toast.error(`No se pudo ejecutar ${toolName}`);
