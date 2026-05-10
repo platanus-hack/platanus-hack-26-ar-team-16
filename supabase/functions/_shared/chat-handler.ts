@@ -380,6 +380,38 @@ function getCoachPersonality(style: string): string {
   }
 }
 
+// TODO: hardcoded to Argentina for v1. For multi-tenant expansion (BR/US),
+// pass timezone from the client and propagate via userProfile.
+function getTemporalContext(timezone = 'America/Argentina/Buenos_Aires'): string {
+  const now = new Date();
+  const dateFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  const timeFmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
+  const dayMap: Record<string, number> = {
+    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
+  };
+  const dow = dayMap[dowFmt.format(now)] ?? 0;
+
+  return `
+CONTEXTO TEMPORAL:
+- Hoy es ${dateFmt.format(now)}, ${timeFmt.format(now)}hs (${timezone})
+- day_of_week actual: ${dow} (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb)
+- "hoy" / "del día" / "esta sesión" → day_of_week=${dow}
+- "mañana" → day_of_week=${(dow + 1) % 7}
+- "ayer" → day_of_week=${(dow + 6) % 7}`;
+}
+
 export function buildSystemPrompt(userProfile: any): string {
   const coachStyle = userProfile?.coachStyle || 'intenso';
   const personality = getCoachPersonality(coachStyle);
@@ -458,7 +490,8 @@ USO DE HERRAMIENTAS:
 - Después de usar una tool, confirmá brevemente qué hiciste.
 - Para rutinas nuevas, usá create_routine con TODOS los días de una.
 - CRÍTICO: Cuando el usuario mencione un día específico (ej. "del miércoles"), buscá el exercise_id de ESE día. El mismo ejercicio puede estar en varios días — usá el ID correcto del día que dijo.
-- Si no especifica día, PREGUNTÁ cuál antes de modificar.
+- Si dice "hoy", "del día" o "esta sesión" → usá el day_of_week del CONTEXTO TEMPORAL, no preguntes.
+- Solo PREGUNTÁ el día cuando es genuinamente ambiguo (sin referencia temporal explícita).
 
 UI VISUAL (JSONL INLINE):
 Podés incluir bloques JSONL al final de tu respuesta para mostrar datos de forma visual y estructurada.
@@ -503,7 +536,7 @@ REGLAS DE JSONL:
 - NO metas JSONL en medio del texto, siempre AL FINAL
 - Preferí Card como contenedor principal, ListItem para listar días/ejercicios, Label para datos clave
 - Para conversación pura sin datos, NO generes JSONL — solo texto
-${profileBlock}${onboardingBlock}`;
+${getTemporalContext()}${profileBlock}${onboardingBlock}`;
 }
 
 // ─── Routine context fetch (scoped by user_id + tenant_id) ──
