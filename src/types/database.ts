@@ -83,10 +83,13 @@ export type Database = {
           created_at: string
           display_name: string
           equipment_available: string[]
+          external_id: string | null
+          external_idp: string | null
           fitness_level: string
           goals: string[]
           id: string
           injuries: string[]
+          last_active_at: string | null
           onboarding_completed: boolean
           tenant_id: string
           training_days_per_week: number
@@ -96,10 +99,13 @@ export type Database = {
           created_at?: string
           display_name?: string
           equipment_available?: string[]
+          external_id?: string | null
+          external_idp?: string | null
           fitness_level?: string
           goals?: string[]
           id: string
           injuries?: string[]
+          last_active_at?: string | null
           onboarding_completed?: boolean
           tenant_id: string
           training_days_per_week?: number
@@ -109,10 +115,13 @@ export type Database = {
           created_at?: string
           display_name?: string
           equipment_available?: string[]
+          external_id?: string | null
+          external_idp?: string | null
           fitness_level?: string
           goals?: string[]
           id?: string
           injuries?: string[]
+          last_active_at?: string | null
           onboarding_completed?: boolean
           tenant_id?: string
           training_days_per_week?: number
@@ -221,6 +230,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          tenant_id: string
           updated_at: string
           user_id: string
         }
@@ -229,6 +239,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          tenant_id: string
           updated_at?: string
           user_id: string
         }
@@ -237,6 +248,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          tenant_id?: string
           updated_at?: string
           user_id?: string
         }
@@ -248,7 +260,129 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "routines_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      tenant_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          kid: string | null
+          last_used_at: string | null
+          name: string
+          revoked_at: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          kid?: string | null
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          kid?: string | null
+          last_used_at?: string | null
+          name?: string
+          revoked_at?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_api_keys_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_signing_secrets: {
+        Row: {
+          created_at: string
+          id: string
+          kid: string
+          revoked_at: string | null
+          secret: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kid: string
+          revoked_at?: string | null
+          secret: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kid?: string
+          revoked_at?: string | null
+          secret?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_signing_secrets_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_events: {
+        Row: {
+          created_at: string
+          event_type: string | null
+          id: string
+          latency_ms: number | null
+          model: string | null
+          tenant_id: string | null
+          tokens_in: number | null
+          tokens_out: number | null
+          tool_calls: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          latency_ms?: number | null
+          model?: string | null
+          tenant_id?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_calls?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string | null
+          id?: string
+          latency_ms?: number | null
+          model?: string | null
+          tenant_id?: string | null
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_calls?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       tenants: {
         Row: {
