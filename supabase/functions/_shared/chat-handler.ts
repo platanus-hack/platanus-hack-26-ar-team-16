@@ -8,6 +8,16 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.39.0';
+import {
+  getCoachPersonality,
+  CORE_IDENTITY,
+  FORMAT_RULES,
+  SCOPE_RULES,
+  TOOL_RULES,
+  UI_RULES,
+  ONBOARDING_MODE,
+  getTemporalContext,
+} from './coach-instructions.ts';
 
 export const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_URL')!,
@@ -26,7 +36,7 @@ export const TOOLS: Anthropic.Tool[] = [
   {
     name: 'create_routine',
     description:
-      'Create a complete workout routine for the user. Use this when the user needs a new routine. Include all training days with their exercises.',
+      'Create a NEW workout routine and switch to it. The user can have multiple saved routines (e.g. "Regular", "Vacaciones", "Bulk", "Cut"); creating a new one deactivates any currently active routine but does NOT delete it — it remains saved and switchable. Pick a short, descriptive routine_name that reflects the context the user described (e.g. "Vacaciones", "Bulk pierna").',
     input_schema: {
       type: 'object',
       properties: {
@@ -143,6 +153,46 @@ export const TOOLS: Anthropic.Tool[] = [
         exercise_id: { type: 'string' },
       },
       required: ['exercise_id'],
+    },
+  },
+  {
+    name: 'list_routines',
+    description:
+      'List all routines the user has saved (active + inactive), with their ids. Use this when the user asks what routines they have, or before switching/renaming/deleting so you can resolve a name to an id.',
+    input_schema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'switch_routine',
+    description:
+      'Make a different saved routine the active one. Pass either routine_id (preferred) or routine_name (case-insensitive contains match). Use when the user says things like "cambiá a la rutina de vacaciones" or "volvé a la regular".',
+    input_schema: {
+      type: 'object',
+      properties: {
+        routine_id: { type: 'string' },
+        routine_name: { type: 'string' },
+      },
+    },
+  },
+  {
+    name: 'rename_routine',
+    description: 'Rename a saved routine.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        routine_id: { type: 'string' },
+        new_name: { type: 'string' },
+      },
+      required: ['routine_id', 'new_name'],
+    },
+  },
+  {
+    name: 'delete_routine',
+    description:
+      'Permanently delete a saved routine. Confirm with the user first if there is any ambiguity. Cannot delete the only remaining routine.',
+    input_schema: {
+      type: 'object',
+      properties: { routine_id: { type: 'string' } },
+      required: ['routine_id'],
     },
   },
 ];
@@ -330,6 +380,116 @@ async function executeRemoveExercise(ctx: AuthCtx, input: any) {
   return { success: !error, error: error?.message };
 }
 
+async function assertRoutineOwnership(ctx: AuthCtx, routineId: string): Promise<boolean> {
+  const { data, error } = await supabaseAdmin
+    .from('routines')
+    .select('id, user_id, tenant_id')
+    .eq('id', routineId)
+    .single();
+  if (error || !data) return false;
+  return data.user_id === ctx.userId && data.tenant_id === ctx.tenantId;
+}
+
+async function executeListRoutines(ctx: AuthCtx) {
+  const { data, error } = await supabaseAdmin
+    .from('routines')
+    .select('id, name, is_active, updated_at')
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId)
+    .order('updated_at', { ascending: false });
+  if (error) return { success: false, error: error.message };
+  return { success: true, routines: data ?? [] };
+}
+
+async function executeSwitchRoutine(ctx: AuthCtx, input: any) {
+  let routineId: string | null = input.routine_id ?? null;
+
+  if (!routineId && input.routine_name) {
+    const { data, error } = await supabaseAdmin
+      .from('routines')
+      .select('id, name')
+      .eq('user_id', ctx.userId)
+      .eq('tenant_id', ctx.tenantId)
+      .ilike('name', `%${input.routine_name}%`);
+    if (error) return { success: false, error: error.message };
+    if (!data || data.length === 0) {
+      return { success: false, error: `No routine matches "${input.routine_name}"` };
+    }
+    if (data.length > 1) {
+      return {
+        success: false,
+        error: `Ambiguous routine name "${input.routine_name}" — matches: ${data.map((r) => r.name).join(', ')}. Pass routine_id instead.`,
+      };
+    }
+    routineId = data[0].id;
+  }
+
+  if (!routineId) return { success: false, error: 'routine_id or routine_name is required' };
+  if (!(await assertRoutineOwnership(ctx, routineId))) {
+    return { success: false, error: 'Routine not found' };
+  }
+
+  await supabaseAdmin
+    .from('routines')
+    .update({ is_active: false })
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId)
+    .eq('is_active', true);
+
+  const { error } = await supabaseAdmin
+    .from('routines')
+    .update({ is_active: true })
+    .eq('id', routineId);
+  return { success: !error, error: error?.message, routine_id: routineId };
+}
+
+async function executeRenameRoutine(ctx: AuthCtx, input: any) {
+  if (!(await assertRoutineOwnership(ctx, input.routine_id))) {
+    return { success: false, error: 'Routine not found' };
+  }
+  const { error } = await supabaseAdmin
+    .from('routines')
+    .update({ name: input.new_name })
+    .eq('id', input.routine_id);
+  return { success: !error, error: error?.message };
+}
+
+async function executeDeleteRoutine(ctx: AuthCtx, input: any) {
+  if (!(await assertRoutineOwnership(ctx, input.routine_id))) {
+    return { success: false, error: 'Routine not found' };
+  }
+
+  const { data: all, error: countErr } = await supabaseAdmin
+    .from('routines')
+    .select('id, is_active')
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId);
+  if (countErr) return { success: false, error: countErr.message };
+  if ((all?.length ?? 0) <= 1) {
+    return { success: false, error: 'Cannot delete the only remaining routine.' };
+  }
+
+  const target = all!.find((r) => r.id === input.routine_id);
+  const { error } = await supabaseAdmin
+    .from('routines')
+    .delete()
+    .eq('id', input.routine_id);
+  if (error) return { success: false, error: error.message };
+
+  // If we just deleted the active routine, promote the most recent remaining one.
+  if (target?.is_active) {
+    const survivor = all!.find((r) => r.id !== input.routine_id);
+    if (survivor) {
+      await supabaseAdmin
+        .from('routines')
+        .update({ is_active: true })
+        .eq('id', survivor.id);
+    }
+  }
+
+  return { success: true };
+}
+
 async function executeTool(ctx: AuthCtx, toolName: string, input: any) {
   switch (toolName) {
     case 'create_routine':
@@ -342,75 +502,20 @@ async function executeTool(ctx: AuthCtx, toolName: string, input: any) {
       return executeAddExercise(ctx, input);
     case 'remove_exercise':
       return executeRemoveExercise(ctx, input);
+    case 'list_routines':
+      return executeListRoutines(ctx);
+    case 'switch_routine':
+      return executeSwitchRoutine(ctx, input);
+    case 'rename_routine':
+      return executeRenameRoutine(ctx, input);
+    case 'delete_routine':
+      return executeDeleteRoutine(ctx, input);
     default:
       return { success: false, error: `Unknown tool: ${toolName}` };
   }
 }
 
 // ─── System prompt builder ──────────────────────────────────
-
-function getCoachPersonality(style: string): string {
-  switch (style) {
-    case 'amable':
-      return `ESTILO: AMABLE — Coach paciente y empático.
-- Usá un tono cálido, comprensivo, nunca presiones.
-- Celebrá cada logro por pequeño que sea.
-- Si el usuario dice que no puede o le cuesta, validá y proponé alternativas suaves.
-- Frases típicas: "Muy bien, vas bárbaro", "No te preocupes, ajustamos", "Cada paso cuenta".
-- Explicá el porqué de cada ejercicio brevemente para que entienda.
-- Máximo 2-3 oraciones por respuesta. Directo al punto.`;
-
-    case 'picante':
-      return `ESTILO: PICANTE — Coach que motiva con humor ácido y desafío.
-- Hablá con confianza y picardía. Provocá al usuario a dar más.
-- Usá humor para empujar: banter, no crueldad. Siempre desde el respeto.
-- Si pide algo fácil: "¿En serio? Dale, metele huevos." Si logra algo: "Mirá vos, quién te conoce."
-- Frases típicas: "¿Eso es todo?", "Mi abuela levanta más", "Bueno, no sos caso perdido", "Ahora sí estás hablando".
-- Retá al usuario a superarse. Si se queja, respondé con humor.
-- Máximo 2-3 oraciones. Sin sermones.`;
-
-    default: // 'intenso'
-      return `ESTILO: INTENSO — Coach profesional, directo, sin vueltas.
-- Hablá como un S&C coach con 15 años de cancha. Cero relleno.
-- Dá indicaciones concretas: pesos, tiempos, técnica. Nada genérico.
-- Si algo está mal, decilo sin rodeos pero con solución inmediata.
-- Frases típicas: "Hacé esto", "Así no va, corregí la postura", "Punto, no hay excusa", "Listo, a entrenar".
-- No pedís permiso, proponés y ejecutás.
-- Máximo 2-3 oraciones. Cada palabra cuenta.`;
-  }
-}
-
-// TODO: hardcoded to Argentina for v1. For multi-tenant expansion (BR/US),
-// pass timezone from the client and propagate via userProfile.
-function getTemporalContext(timezone = 'America/Argentina/Buenos_Aires'): string {
-  const now = new Date();
-  const dateFmt = new Intl.DateTimeFormat('es-AR', {
-    timeZone: timezone,
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-  const timeFmt = new Intl.DateTimeFormat('es-AR', {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const dowFmt = new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' });
-  const dayMap: Record<string, number> = {
-    Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6,
-  };
-  const dow = dayMap[dowFmt.format(now)] ?? 0;
-
-  return `
-CONTEXTO TEMPORAL:
-- Hoy es ${dateFmt.format(now)}, ${timeFmt.format(now)}hs (${timezone})
-- day_of_week actual: ${dow} (0=Dom, 1=Lun, 2=Mar, 3=Mié, 4=Jue, 5=Vie, 6=Sáb)
-- "hoy" / "del día" / "esta sesión" → day_of_week=${dow}
-- "mañana" → day_of_week=${(dow + 1) % 7}
-- "ayer" → day_of_week=${(dow + 6) % 7}`;
-}
 
 export function buildSystemPrompt(userProfile: any): string {
   const coachStyle = userProfile?.coachStyle || 'intenso';
@@ -429,119 +534,33 @@ USER PROFILE:
     : '\nUSER PROFILE: Usuario nuevo, arrancá con onboarding.';
 
   const onboardingBlock = !userProfile?.onboardingCompleted
-    ? `\n\nMODO ONBOARDING — ACTIVO (usuario sin rutina):
-Tu única misión ahora es recolectar datos para crear la primera rutina. Reglas estrictas:
-
-## Las 7 preguntas en orden
-
-1. **Objetivo** — chips: Ganar músculo · Perder grasa · Ponerme en forma · Aumentar fuerza · Mejorar resistencia
-2. **Sexo** — chips: Masculino · Femenino · Prefiero no decir. SALTEAR si el profile ya tiene gender.
-3. **Experiencia** — chips: Principiante · Intermedio (recomendado) · Avanzado
-4. **Días/semana** — chips: 2 · 3 · 4 (recomendado) · 5 · 6
-5. **Tiempo/sesión** — chips: 30 min · 45 min · 60 min (recomendado) · 90 min
-6. **Preferencias** — chips multi: Pesas/máquinas (recomendado) · Funcional · HIIT · Cardio · Mobility
-7. **Lesiones** — chips: No tengo (recomendado) · Rodilla · Hombro · Espalda baja · Espalda alta-cuello · Cadera · Muñeca · Otra
-
-## Reglas operativas
-
-- Una pregunta por turno. Podés agrupar días+tiempo en un solo turno si tiene sentido.
-- Para cada pregunta incluí chips usando JSONL (formato que ya conocés). Ejemplo para experiencia:
-
-{"op":"add","path":"/root","value":"row"}
-{"op":"add","path":"/elements/row","value":{"type":"Row","props":{"gap":8,"flexWrap":"wrap"},"children":["e1","e2","e3"]}}
-{"op":"add","path":"/elements/e1","value":{"type":"Chip","props":{"label":"Principiante"},"on":{"press":{"action":"reply","params":{"text":"principiante"}}},"children":[]}}
-{"op":"add","path":"/elements/e2","value":{"type":"Chip","props":{"label":"Intermedio ✓"},"on":{"press":{"action":"reply","params":{"text":"intermedio"}}},"children":[]}}
-{"op":"add","path":"/elements/e3","value":{"type":"Chip","props":{"label":"Avanzado"},"on":{"press":{"action":"reply","params":{"text":"avanzado"}}},"children":[]}}
-
-- Parsear respuestas combinadas: si en un mensaje el usuario da múltiples datos ("intermedio, 4 días, 60 min"), anotarlos todos y avanzar a la siguiente pregunta sin responder.
-- Reaccionar a las respuestas con energía: "Hipertrofia, dale 💪", "4 días, perfecto".
-- Tono de entrenador humano: voseo rioplatense, nunca "indique" ni "seleccione".
-- Después de pregunta 5, si el usuario muestra impaciencia: "Con esto ya puedo. ¿Te armo ahora o querés sumar 2 detalles más?"
-- Si el usuario dice "más tarde" o quiere postergar: "Listo, cuando quieras solo escribime y arrancamos. Si necesitás algo puntual también podés preguntarme." Quedar en chat libre.
-
-## Lesiones — NO salteable
-
-Si el usuario no responde o dice "no quiero contestar", generá la rutina de todas formas con disclaimer: "Como no me dijiste lesiones, te armo la versión conservadora. Si algo duele, decime."
-
-## Al tener las 7 respuestas
-
-1. Resumir: "Entonces: [objetivo], [experiencia], [días] días de [tiempo], [preferencias], [lesiones]. ¿Confirmás y armo?"
-2. Si confirma → llamar create_routine con TODOS los días de una sola vez.
-3. Cerrar con: "Listo, te armé tu primera rutina 💪 [resumen breve]. Es un punto de partida, no un veredicto. Probala y me decís qué afinamos. La encontrás en la pestaña Rutinas."`
+    ? `\n\n${ONBOARDING_MODE}`
     : '';
 
-  return `Sos Gohan, entrenador personal con 15 años de experiencia en fuerza, hipertrofia y acondicionamiento. Hablás español rioplatense.
+  return `${CORE_IDENTITY}
 
 ${personality}
 
-REGLAS DE FORMATO:
-- Respondé SIEMPRE en español rioplatense (vos, sos, tenés, hacé).
-- Máximo 2-3 oraciones por respuesta. Si necesitás más, usá bullets cortísimos.
-- NUNCA hagas listas largas ni paredes de texto. Sé conciso como un coach real hablando en el gym.
-- Usá nombres de ejercicios que se usen en Argentina (sentadilla, press banca, peso muerto, curl, remo).
+${FORMAT_RULES}
 
-ALCANCE — ESTRICTO:
-- SOLO hablás de: ejercicio, rutinas, técnica, recuperación, nutrición deportiva, hidratación, sueño, prevención de lesiones.
-- Cualquier otra cosa: "Eso no es lo mío, yo te ayudo con el entrenamiento. ¿Qué necesitás?"
-- NUNCA salgas de personaje.
+${SCOPE_RULES}
 
-USO DE HERRAMIENTAS:
-- Cuando modifiques rutinas, SIEMPRE usá las tools. Nunca describas cambios solo en texto.
-- Después de usar una tool, confirmá brevemente qué hiciste.
-- Para rutinas nuevas, usá create_routine con TODOS los días de una.
-- CRÍTICO: Cuando el usuario mencione un día específico (ej. "del miércoles"), buscá el exercise_id de ESE día. El mismo ejercicio puede estar en varios días — usá el ID correcto del día que dijo.
-- Si dice "hoy", "del día" o "esta sesión" → usá el day_of_week del CONTEXTO TEMPORAL, no preguntes.
-- Solo PREGUNTÁ el día cuando es genuinamente ambiguo (sin referencia temporal explícita).
+${TOOL_RULES}
 
-UI VISUAL (JSONL INLINE):
-Podés incluir bloques JSONL al final de tu respuesta para mostrar datos de forma visual y estructurada.
-Cada línea JSONL es una operación RFC 6902 JSON Patch que el cliente renderiza como componentes nativos.
-
-CUÁNDO USAR JSONL:
-- Después de crear una rutina: mostrá un resumen con Card + ListItem por día
-- Después de modificar ejercicios: mostrá qué cambió con Card + ListItem
-- Cuando expliques un ejercicio: mostrá una Card con los detalles (series, reps, descanso, técnica)
-- Cuando des un plan o recomendación estructurada: Card con bullets/items
-- NUNCA para preguntas simples o charla — ahí solo texto
-
-FORMATO: Escribí tu respuesta de texto PRIMERO, después dejá una línea en blanco y emití las líneas JSONL.
-Componentes disponibles: Card, ListItem, Row, Column, Heading, Paragraph, Label, Chip, Badge, Container, Divider, Spacer.
-
-EJEMPLO 1 — Resumen de rutina creada:
-Listo, te armé la rutina. Acá va el resumen:
-
-{"op":"add","path":"/root","value":"card"}
-{"op":"add","path":"/elements/card","value":{"type":"Card","props":{"title":"Push / Pull / Legs"},"children":["d1","d2","d3"]}}
-{"op":"add","path":"/elements/d1","value":{"type":"ListItem","props":{"title":"Lunes — Push","subtitle":"Press banca 4x10, Press militar 3x10, Fondos 3x12"},"children":[]}}
-{"op":"add","path":"/elements/d2","value":{"type":"ListItem","props":{"title":"Miércoles — Pull","subtitle":"Dominadas 4x8, Remo 4x10, Curl bíceps 3x12"},"children":[]}}
-{"op":"add","path":"/elements/d3","value":{"type":"ListItem","props":{"title":"Viernes — Legs","subtitle":"Sentadilla 4x8, Peso muerto 3x6, Prensa 3x12"},"children":[]}}
-
-EJEMPLO 2 — Detalle de ejercicio:
-Acá tenés el desglose de la sentadilla:
-
-{"op":"add","path":"/root","value":"card"}
-{"op":"add","path":"/elements/card","value":{"type":"Card","props":{"title":"Sentadilla"},"children":["info","tip"]}}
-{"op":"add","path":"/elements/info","value":{"type":"Column","props":{"gap":"xs"},"children":["s","r","d"]}}
-{"op":"add","path":"/elements/s","value":{"type":"Label","props":{"text":"4 series x 8 reps @ 60kg"},"children":[]}}
-{"op":"add","path":"/elements/r","value":{"type":"Label","props":{"text":"Descanso: 90 seg"},"children":[]}}
-{"op":"add","path":"/elements/d","value":{"type":"Label","props":{"text":"Tempo: 3-1-2 (excéntrica-pausa-concéntrica)"},"children":[]}}
-{"op":"add","path":"/elements/tip","value":{"type":"Paragraph","props":{"text":"Bajá hasta romper el paralelo, rodillas en línea con las puntas de los pies. Si tenés molestia lumbar, probá con goblet squat."},"children":[]}}
-
-REGLAS DE JSONL:
-- Cada línea JSONL es un JSON COMPLETO en una sola línea, sin saltos de línea dentro
-- Siempre empezá con {"op":"add","path":"/root","value":"..."} para el root
-- Luego {"op":"add","path":"/elements/...","value":{...}} para cada elemento
-- Los children son arrays de IDs que referencian otros elementos
-- Usá IDs cortos (card, d1, d2, info, tip, etc.)
-- NO metas JSONL en medio del texto, siempre AL FINAL
-- Preferí Card como contenedor principal, ListItem para listar días/ejercicios, Label para datos clave
-- Para conversación pura sin datos, NO generes JSONL — solo texto
+${UI_RULES}
 ${getTemporalContext()}${profileBlock}${onboardingBlock}`;
 }
 
 // ─── Routine context fetch (scoped by user_id + tenant_id) ──
 
 export async function getRoutineContext(ctx: AuthCtx): Promise<string> {
+  const { data: allRoutines } = await supabaseAdmin
+    .from('routines')
+    .select('id, name, is_active, updated_at')
+    .eq('user_id', ctx.userId)
+    .eq('tenant_id', ctx.tenantId)
+    .order('updated_at', { ascending: false });
+
   const { data: routine } = await supabaseAdmin
     .from('routines')
     .select(`
@@ -558,9 +577,17 @@ export async function getRoutineContext(ctx: AuthCtx): Promise<string> {
     .eq('is_active', true)
     .single();
 
-  if (!routine) return '\nCURRENT ROUTINE: None — user has no routine yet.';
+  let savedBlock = '';
+  if (allRoutines && allRoutines.length > 0) {
+    savedBlock = `\nSAVED ROUTINES (user can have multiple — use switch_routine to change active):\n`;
+    for (const r of allRoutines) {
+      savedBlock += `  - "${r.name}" (id: ${r.id})${r.is_active ? ' [ACTIVE]' : ''}\n`;
+    }
+  }
 
-  let out = `\nCURRENT ROUTINE: "${routine.name}"\n`;
+  if (!routine) return `${savedBlock}\nCURRENT ROUTINE: None — user has no routine yet.`;
+
+  let out = `${savedBlock}\nCURRENT ROUTINE: "${routine.name}"\n`;
   const days = routine.routine_days?.sort((a: any, b: any) => a.day_of_week - b.day_of_week) ?? [];
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 

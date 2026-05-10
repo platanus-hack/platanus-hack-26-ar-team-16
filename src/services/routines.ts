@@ -188,3 +188,49 @@ export async function getRoutineIdsForUser(
   if (error) throw error;
   return ((data ?? []) as { id: string }[]).map((r) => r.id);
 }
+
+export interface RoutineSummary {
+  id: string;
+  name: string;
+  isActive: boolean;
+  updatedAt: string;
+}
+
+/** Lightweight list of all routines a user has saved (active or not). Used by
+ *  the routine picker so users can switch between e.g. "Regular" and "Vacaciones". */
+export async function listUserRoutines(
+  userId: string,
+  client?: Db,
+): Promise<RoutineSummary[]> {
+  const { data, error } = await db(client)
+    .from('routines')
+    .select('id, name, is_active, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as { id: string; name: string; is_active: boolean; updated_at: string }[])
+    .map((r) => ({ id: r.id, name: r.name, isActive: r.is_active, updatedAt: r.updated_at }));
+}
+
+/** Switch which of the user's saved routines is active. Two writes (deactivate
+ *  all, activate target) — not atomic, but fine here: realtime refetches the
+ *  active routine after the second write settles. */
+export async function setActiveRoutine(
+  userId: string,
+  routineId: string,
+  client?: Db,
+): Promise<void> {
+  const c = db(client);
+  const { error: deactErr } = await c
+    .from('routines')
+    .update({ is_active: false })
+    .eq('user_id', userId)
+    .eq('is_active', true);
+  if (deactErr) throw deactErr;
+  const { error: actErr } = await c
+    .from('routines')
+    .update({ is_active: true })
+    .eq('user_id', userId)
+    .eq('id', routineId);
+  if (actErr) throw actErr;
+}

@@ -7,12 +7,22 @@ import type { RoutineDay } from '../../modules/routine/types';
 interface RoutineHeaderProps {
   selectedDay: RoutineDay | null;
   onPressCalendar: () => void;
+  /** Active routine name shown as the header title (replaces the static label
+   *  when present so the user always sees which routine they're viewing). */
+  activeRoutineName?: string | null;
 }
 
-export function RoutineHeader({ onPressCalendar }: RoutineHeaderProps) {
+export function RoutineHeader({ onPressCalendar, activeRoutineName }: RoutineHeaderProps) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.section}>MI ENTRENAMIENTO</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.section}>MI ENTRENAMIENTO</Text>
+        {activeRoutineName && (
+          <Text style={styles.name} numberOfLines={1}>
+            {activeRoutineName}
+          </Text>
+        )}
+      </View>
       <Pressable
         onPress={onPressCalendar}
         accessibilityRole="button"
@@ -33,6 +43,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
   },
   section: {
     fontSize: 11,
@@ -40,6 +51,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     color: '#B8B8B8',
     textTransform: 'uppercase',
+  },
+  name: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 2,
   },
   calBtn: {
     width: 40,

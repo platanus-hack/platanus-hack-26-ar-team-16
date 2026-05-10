@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 
 import type { RoutineDay } from '../../modules/routine/types';
 
@@ -23,22 +23,28 @@ export function DaySelector({ days, selectedDayId, onSelect }: DaySelectorProps)
       {days.map((day, idx) => {
         const isActive = day.id === selectedDayId;
         const abbrev = DAY_ABBREVS[day.day_index] ?? DAY_ABBREVS[idx % 7];
-        const muscle = day.muscle_groups?.[0] ?? day.name;
+        const label = (day.name || day.muscle_groups?.[0] || '').toUpperCase();
 
         return (
           <Pressable
             key={day.id}
             onPress={() => onSelect(day.id)}
             accessibilityRole="button"
-            accessibilityLabel={`${abbrev}: ${muscle}`}
+            accessibilityLabel={`${abbrev}: ${label}`}
             accessibilityState={{ selected: isActive }}
             style={[styles.pill, isActive && styles.pillActive]}
           >
-            <Text style={styles.pillName} numberOfLines={1}>
+            <Text
+              style={[styles.weekday, isActive && styles.weekdayActive]}
+              numberOfLines={1}
+            >
               {abbrev}
             </Text>
-            <Text style={[styles.pillSub, isActive && styles.pillSubActive]} numberOfLines={1}>
-              {muscle}
+            <Text
+              style={[styles.label, isActive && styles.labelActive]}
+              numberOfLines={1}
+            >
+              {label}
             </Text>
           </Pressable>
         );
@@ -55,29 +61,34 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   pill: {
-    minWidth: 88,
-    height: 64,
-    paddingHorizontal: 14,
+    minWidth: 110,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 14,
     backgroundColor: '#1A1A1A',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
   pillActive: {
     backgroundColor: '#FF6B00',
   },
-  pillName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
+  weekday: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#888',
+    letterSpacing: 1.2,
+    marginBottom: 2,
   },
-  pillSub: {
-    fontSize: 11,
-    color: '#B8B8B8',
-    marginTop: 2,
+  weekdayActive: {
+    color: 'rgba(0,0,0,0.7)',
   },
-  pillSubActive: {
+  label: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+  labelActive: {
+    color: '#000',
   },
 });
