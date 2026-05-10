@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '@/theme';
-import { useOnboardingStore, useAuthStore, toast } from '@/store';
+import { useOnboardingStore, useAuthStore, useChatStore, toast } from '@/store';
 import { StandaloneCoachProvider } from '@/components/StandaloneCoachProvider';
 import { sendUserMessage } from '@/modules/chat/ChatManager';
 import { getActiveRoutine } from '@/services/routines';
@@ -62,7 +62,15 @@ function formatAnswer(
 
 // ─── Loading screen ──────────────────────────────────────────────────────────
 
-function LoadingScreen({ c }: { c: ReturnType<typeof useTheme>['tenant']['colors'] }) {
+function LoadingScreen({
+  c,
+  onSkip,
+  onHome,
+}: {
+  c: ReturnType<typeof useTheme>['tenant']['colors'];
+  onSkip: () => void;
+  onHome: () => void;
+}) {
   const [tipIndex, setTipIndex] = useState(0);
 
   useEffect(() => {
@@ -73,55 +81,67 @@ function LoadingScreen({ c }: { c: ReturnType<typeof useTheme>['tenant']['colors
   }, []);
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 32 }}>
-      <ActivityIndicator size="large" color={c.primary} />
-      <View style={{ gap: 12, alignItems: 'center' }}>
-        <Text
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, gap: 32 }}>
+        <ActivityIndicator size="large" color={c.primary} />
+        <View style={{ gap: 12, alignItems: 'center' }}>
+          <Text style={{ color: c.text, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
+            Armando tu rutina...
+          </Text>
+          <Text style={{ color: c.textMuted, fontSize: 13, textAlign: 'center', lineHeight: 20 }}>
+            Esto puede tardar unos segundos.
+          </Text>
+        </View>
+
+        <View
           style={{
-            color: c.text,
-            fontSize: 22,
-            fontWeight: '700',
-            textAlign: 'center',
+            backgroundColor: c.surface,
+            borderRadius: 16,
+            padding: 20,
+            borderWidth: 1,
+            borderColor: c.border,
+            width: '100%',
+            gap: 8,
           }}
         >
-          Armando tu rutina...
-        </Text>
-        <Text
-          style={{
-            color: c.textMuted,
-            fontSize: 13,
-            textAlign: 'center',
-            lineHeight: 20,
-          }}
-        >
-          Esto puede tardar unos segundos.
-        </Text>
+          <Text style={{ color: c.primary, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 }}>
+            💡 CONSEJO
+          </Text>
+          <Text style={{ color: c.text, fontSize: 15, lineHeight: 22, fontWeight: '500' }}>
+            {TIPS[tipIndex]}
+          </Text>
+        </View>
       </View>
 
+      {/* Footer: skip + home */}
       <View
         style={{
-          backgroundColor: c.surface,
-          borderRadius: 16,
-          padding: 20,
-          borderWidth: 1,
-          borderColor: c.border,
-          width: '100%',
-          gap: 8,
+          paddingHorizontal: 20,
+          paddingVertical: 16,
+          gap: 10,
+          borderTopWidth: 1,
+          borderTopColor: c.border,
         }}
       >
-        <Text style={{ color: c.primary, fontSize: 11, fontWeight: '700', letterSpacing: 0.8 }}>
-          💡 CONSEJO
-        </Text>
-        <Text
-          style={{
-            color: c.text,
-            fontSize: 15,
-            lineHeight: 22,
-            fontWeight: '500',
-          }}
+        <Pressable
+          onPress={onSkip}
+          style={({ pressed }) => ({
+            backgroundColor: c.primary,
+            borderRadius: 14,
+            paddingVertical: 14,
+            alignItems: 'center',
+            opacity: pressed ? 0.85 : 1,
+          })}
         >
-          {TIPS[tipIndex]}
-        </Text>
+          <Text style={{ color: c.onPrimary, fontSize: 15, fontWeight: '700' }}>
+            Ir a rutinas
+          </Text>
+        </Pressable>
+        <Pressable onPress={onHome} hitSlop={8} style={{ alignItems: 'center', paddingVertical: 4 }}>
+          <Text style={{ color: c.textMuted, fontSize: 14, fontWeight: '600' }}>
+            Volver al inicio
+          </Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -246,7 +266,6 @@ function OnboardingWizardInner() {
   const router = useRouter();
   const markVisited = useOnboardingStore((s) => s.markVisited);
   const userId = useAuthStore((s) => s.user?.id);
-  const onboardingCompleted = useAuthStore((s) => s.user?.onboardingCompleted ?? false);
 
   useEffect(() => {
     markVisited();
@@ -259,12 +278,22 @@ function OnboardingWizardInner() {
   const [customText, setCustomText] = useState<CustomMap>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Watch for onboardingCompleted to flip true (set by ChatManager.onToolEnd
-  // when create_routine succeeds) and transition to review phase.
-  const awaitingRoutine = useRef(false);
+  // Track streaming to detect when routine generation completes.
+  // We watch isStreaming: when it starts (true) and then ends (false) while
+  // in loading phase, we try to fetch the newly created routine.
+  // This is more reliable than watching onboardingCompleted because ChatManager
+  // guards that update with `if (!user.onboardingCompleted)`.
+  const isStreaming = useChatStore((s) => s.streaming.isStreaming);
+  const streamingStarted = useRef(false);
+
   useEffect(() => {
-    if (!awaitingRoutine.current || !onboardingCompleted || !userId) return;
-    awaitingRoutine.current = false;
+    if (phase !== 'loading') return;
+    if (isStreaming) {
+      streamingStarted.current = true;
+      return;
+    }
+    if (!streamingStarted.current || !userId) return;
+    streamingStarted.current = false;
     getActiveRoutine(userId)
       .then((r) => {
         if (r) {
@@ -274,10 +303,8 @@ function OnboardingWizardInner() {
           router.replace('/(tabs)/routine');
         }
       })
-      .catch(() => {
-        router.replace('/(tabs)/routine');
-      });
-  }, [onboardingCompleted, userId, router]);
+      .catch(() => router.replace('/(tabs)/routine'));
+  }, [phase, isStreaming, userId, router]);
 
   const question = ONBOARDING_QUESTIONS[stepIndex];
   const total = ONBOARDING_QUESTIONS.length;
@@ -346,7 +373,6 @@ function OnboardingWizardInner() {
         composite[q.id] = formatAnswer(answers[q.id] ?? [], customText[q.id], q.id);
       }
       const message = buildSummaryMessage(composite);
-      awaitingRoutine.current = true;
       void sendUserMessage(message);
       setPhase('loading');
     } catch {
@@ -359,7 +385,11 @@ function OnboardingWizardInner() {
   if (phase === 'loading') {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: c.background }} edges={['top', 'bottom']}>
-        <LoadingScreen c={c} />
+        <LoadingScreen
+          c={c}
+          onSkip={() => router.replace('/(tabs)/routine')}
+          onHome={() => router.replace('/(tabs)')}
+        />
       </SafeAreaView>
     );
   }
