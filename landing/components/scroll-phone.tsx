@@ -33,6 +33,30 @@ export function ScrollPhone() {
   const [progress, setProgress] = useState(0);
   const [interactive, setInteractive] = useState(false);
   const isMobile = useIsMobile();
+  // Cap the phone scale so the iPhone always fits in the viewport with
+  // generous margins for the nav (top) and tab bar inside the iframe (bottom).
+  // Without this, on shorter desktop viewports the 844px-tall phone clips
+  // under the nav and below the fold, eating the bottom buttons of the app.
+  const [maxScale, setMaxScale] = useState(1);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const compute = () => {
+      if (isMobile) {
+        setMaxScale(1);
+        return;
+      }
+      const navHeight = 56; // h-14 fixed nav
+      // ~80px above and below the phone so the iframe's header (Megatlon
+      // brand bar, bell, search) and bottom tab bar are clearly visible
+      // and clickable, not eaten by the page chrome.
+      const breathingRoom = 160;
+      const fit = (window.innerHeight - navHeight - breathingRoom) / IPHONE_H;
+      setMaxScale(Math.min(1, Math.max(0.6, fit)));
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [isMobile]);
 
   // Scroll-driven progress with rAF — this is the cross-browser path.
   // Modern browsers ALSO get the CSS animation-timeline declared in globals.css,
@@ -89,11 +113,11 @@ export function ScrollPhone() {
     };
   }, [progress, isMobile]);
 
-  // Map progress 0..1 into a phone scale 0.7 .. 1 and a corner radius
+  // Map progress 0..1 into a phone scale 0.7 .. maxScale and a corner radius
   // 2.75rem .. 0.4rem (some rounding stays even at full-bleed for charm).
   // Starts larger so the phone feels present from the moment the section enters.
   const expansion = Math.min(1, Math.max(0, (progress - 0.05) / 0.7));
-  const scale = 0.7 + expansion * 0.3;
+  const scale = 0.7 + expansion * (maxScale - 0.7);
   const radius = 2.75 - expansion * 2.4;
 
   return (
@@ -301,7 +325,18 @@ function DemoQr() {
   });
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?${params.toString()}`;
   return (
-    <div className="hidden md:block absolute left-6 lg:left-10 top-1/2 -translate-y-1/2 w-44 lg:w-48">
+    // Horizontally centered in the gap between the viewport edge and the
+    // phone's left bezel: left = (viewport - phone width) / 4. The
+    // translate(-50%) anchors the QR's center on that midpoint, so it
+    // breathes evenly on either side regardless of screen width.
+    <div
+      className="hidden md:block absolute w-44 lg:w-48"
+      style={{
+        left: `calc((100vw - ${IPHONE_W}px) / 4)`,
+        top: "50%",
+        transform: "translate(-50%, -50%)",
+      }}
+    >
       <div className="eyebrow text-[var(--color-flame)] mb-3">
         Try it on your phone
       </div>
