@@ -490,14 +490,18 @@ async function getRoutineContext(userId: string): Promise<string> {
 // ─── Main handler ───────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
+  // Browser-side fetch (Expo Web on Vercel) sends cache-control on the
+  // preflight; without it whitelisted, Chrome and Safari reject the request
+  // and the chat never reaches the function.
+  const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers':
+      'Content-Type, Authorization, apikey, x-no-stream, cache-control',
+  };
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, apikey, x-no-stream',
-      },
-    });
+    return new Response(null, { headers: CORS_HEADERS });
   }
 
   try {
@@ -507,7 +511,7 @@ Deno.serve(async (req: Request) => {
     if (!userId) {
       return new Response(JSON.stringify({ error: 'User ID required' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       });
     }
 
@@ -534,7 +538,7 @@ Deno.serve(async (req: Request) => {
         userId
       );
       return new Response(JSON.stringify(response), {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
       });
     }
 
@@ -566,13 +570,13 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
+        ...CORS_HEADERS,
       },
     });
   } catch (err: any) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
     });
   }
 });
