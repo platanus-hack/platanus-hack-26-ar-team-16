@@ -14,7 +14,7 @@ export function Hero() {
           <Eyebrow number="01">AI for fitness · Buenos Aires</Eyebrow>
         </Reveal>
 
-        <h1 className="display mt-10 text-[19vw] md:text-[15vw] lg:text-[14rem] -tracking-[0.04em]">
+        <h1 className="display mt-10 text-[14vw] sm:text-[16vw] md:text-[15vw] lg:text-[14rem] -tracking-[0.04em] [text-wrap:balance]">
           <LetterRise text="Make your gym" />
           <br />
           <span className="display-italic text-[var(--color-flame)]">

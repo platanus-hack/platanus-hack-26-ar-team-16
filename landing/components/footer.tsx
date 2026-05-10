@@ -26,10 +26,10 @@ export function Footer() {
           <FooterCol
             title="Product"
             items={[
-              ["Manifesto", "#manifesto"],
-              ["Try it", "#try"],
-              ["How it works", "#how"],
-              ["Developers", "#developers"],
+              ["Manifesto", "/#manifesto"],
+              ["Try it", "/#try"],
+              ["How it works", "/#how"],
+              ["MCP integration", "/mcp"],
             ]}
           />
           <FooterCol
