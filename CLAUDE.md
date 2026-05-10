@@ -34,7 +34,7 @@ NativeWind v4 works on web AND mobile. Use Tailwind `className` for all styling 
 - AI responses use Claude streaming (token by token)
 - Claude `tool_use` modifies routines directly in Supabase
 - Supabase Realtime pushes routine changes to the Routine screen
-- Multi-tenant: tenant config (colors, logo) loaded from `tenants` table
+- Multi-tenant: each tenant **ships as its own app**. Brand identity (colors, surfaces, copy) is locked at build time via `EXPO_PUBLIC_TENANT_SLUG` and resolved by `useTheme()` from `src/theme/tenants/<slug>.ts`. The DB-side `tenants` table is still queried for runtime metadata (id, name) but it does NOT drive styling.
 - Chat guardrail: AI only responds about fitness / training / sports nutrition
 
 ---
