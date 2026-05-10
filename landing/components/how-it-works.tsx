@@ -6,12 +6,12 @@ export function HowItWorks() {
     {
       n: "01",
       h: "Connect",
-      b: "Drop our SDK into your existing app. One npm install. We don't replace your stack — we augment it.",
+      b: "Embed our React module in your app, or point your backend agent at our MCP server over HTTP. Both paths use the same nine-tool API.",
     },
     {
       n: "02",
       h: "Configure",
-      b: "Pass tenant config — logo, colors, members table mapping. Members never leave your brand.",
+      b: "Issue a tenant API key. Pass logo, colors, and your user mapping. Tenant scoping is automatic from there — your members never leave your brand.",
     },
     {
       n: "03",
