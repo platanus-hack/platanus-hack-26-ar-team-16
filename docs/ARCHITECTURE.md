@@ -364,6 +364,7 @@ SHA-256 hashed, scoped per tenant, support `kid` for rotation, plaintext shown o
 | PII / data residency | Only `sa-east-1` today; multi-region for EU | Deferred |
 | Pre-login branding | RLS blocks anon read of `tenants` | Phase 4.2 |
 | Hermes bundle reverse-eng | Acceptable; real IP lives in edge function | Accepted |
+| **Open Wearables admin creds in client bundle** (`src/services/openWearables.ts`) | Move auth to edge function `ow-bridge`; persist `ow_user_id` mapping on `profiles` | **OPEN — see §14 + `docs/tech-debt.md`** |
 
 ---
 
@@ -390,7 +391,65 @@ SHA-256 hashed, scoped per tenant, support `kid` for rotation, plaintext shown o
 
 ---
 
-## 14. Build & Deploy
+## 14. Wearables Bridge (Open Wearables) — current state vs. target
+
+The "Conectar Reloj" sheet in the standalone shell's Más tab integrates with a third-party [Open Wearables](https://github.com/your-org/open-wearables) backend for steps / calories / sleep data. This integration was added in commit `82d2750` (pre-auth-refactor) and **does not yet conform to §10's identity model**. It is a tracked debt item — see `docs/tech-debt.md`.
+
+### Current state (DO NOT extend before refactor)
+
+```
+React Native client (mas.tsx)
+   └─> src/hooks/useOpenWearables.ts
+         └─> src/services/openWearables.ts
+               ├─ POST OW_HOST/auth/login (admin@admin.com + bundled password) ← bundle-leaked
+               ├─ GET  OW_HOST/api/v1/users (admin token)                       ← list-all
+               ├─ POST OW_HOST/api/v1/users (admin token)                       ← client-driven creation
+               └─ stores ow_user_id in module-level `let`                       ← non-persistent
+```
+
+Three properties of this path violate the auth refactor invariants:
+
+1. **Admin creds in the JS bundle.** The OW admin email/password are string literals in `openWearables.ts`. They ship in the Hermes bundle and are in git history (rotation pending — see `tech-debt.md`).
+2. **Client-controlled identity.** `ensureOWUser(email)` lets the client pick which OW user it operates as. There is no Gohan-side `(gohan_user_id ↔ ow_user_id)` mapping; nothing prevents impersonation by passing a different email.
+3. **Per-bundle ephemeral state.** `owUserId` is held in a module-level variable that resets on app restart, requiring a re-auth round-trip every cold start.
+
+### Target state
+
+A new edge function `ow-bridge` deployed alongside `api-chat` and `api-session`:
+
+```
+Client                                  Edge: ow-bridge                      OW backend
+──────                                  ────────────────                      ──────────
+apiClient.request('/wearables/connect')  ─>  resolveAuth(req)            ─>   admin login (creds in
+                                              upsert wearables_links            edge-function secrets)
+                                              return {connected: true}    <─   create/find OW user
+apiClient.request('/wearables/sync')     ─>  resolveAuth(req)            ─>   sync user
+apiClient.request('/wearables/activity') ─>  resolveAuth(req)            ─>   GET /summaries/activity
+                                              row from wearables_links
+```
+
+Schema addition (Phase TBD):
+
+```sql
+create table public.wearables_links (
+  user_id      uuid primary key references public.profiles(id) on delete cascade,
+  tenant_id    uuid not null references public.tenants(id),
+  provider     text not null check (provider in ('open_wearables')),
+  external_id  text not null,
+  connected_at timestamptz not null default now(),
+  unique (tenant_id, provider, external_id)
+);
+```
+
+Once `ow-bridge` lands, `src/services/openWearables.ts` becomes a thin `apiClient.request('/wearables/...')` wrapper — no admin token, no direct calls to `OW_HOST`, no module-level state — and is then safe to ship in the embeddable `@gohan-ai/react-native` module.
+
+### Until then
+
+Do not call `openWearables.ts` from the embeddable module's exports. Keep it confined to the standalone shell's `app/(tabs)/mas.tsx`. Do not add new wearable providers (Whoop, Oura, etc.) on top of the current pattern — that compounds the debt across N services.
+
+---
+
+## 15. Build & Deploy
 
 | Component | Build | Deploy |
 |-----------|-------|--------|
@@ -417,7 +476,7 @@ The module exposes a single `<GohanCoach />` root that wires the stores, the HTT
 
 ---
 
-## 15. Glossary
+## 16. Glossary
 
 - **tenant** — a gym customer; row in `tenants` table, identified by `slug`
 - **external_id** — gym's user ID (opaque to Gohan); unique per `(tenant_id, external_id)`
