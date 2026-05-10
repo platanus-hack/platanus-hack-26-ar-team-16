@@ -47,10 +47,10 @@ export function ScrollPhone() {
         return;
       }
       const navHeight = 56; // h-14 fixed nav
-      // ~100px above and below the phone so the iframe's header and bottom
-      // tab bar (INICIO / GOHAN / RUTINAS / MÁS) are clickable, plus extra
-      // for the page nav backdrop blur.
-      const breathingRoom = 200;
+      // 16px above + 16px below the phone — phone sits right under the nav
+      // banner with a thin breathing band on each side. Anything more makes
+      // the phone feel small on a 13" MBP at fullscreen.
+      const breathingRoom = 32;
       const fit = (window.innerHeight - navHeight - breathingRoom) / IPHONE_H;
       // No floor: on very short viewports the phone shrinks but always fits.
       setFitScale(Math.min(1, fit));
