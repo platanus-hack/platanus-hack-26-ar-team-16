@@ -15,8 +15,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
-// ASSUMPTION: useTenantStore lives in src/store/. If the path differs, fix here.
 import { useTenantStore } from '../../src/store/useTenantStore';
+import { useAuthStore } from '../../src/store/useAuthStore';
 
 /* ─── Megatlon brand tokens ─────────────────────────────────────── */
 const MT = {
@@ -147,10 +147,16 @@ function MegatlonTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 }
 
 export default function TabsLayout() {
-  // ASSUMPTION: useTenantStore has tenant?.slug. If the store shape differs, fix here.
   const tenantSlug = useTenantStore((s) => s.tenant?.slug ?? null);
+  const isTenantLoaded = useTenantStore((s) => s.isLoaded);
+  const isAuthLoading = useAuthStore((s) => s.isLoading);
 
-  if (tenantSlug !== 'megatlon') {
+  // While auth or tenant is still resolving, assume Megatlon to avoid
+  // flashing the white DefaultTabsLayout. Only fall back to Default once
+  // we know for certain the tenant is not 'megatlon'.
+  const showDefault = isTenantLoaded && !isAuthLoading && tenantSlug !== 'megatlon';
+
+  if (showDefault) {
     return <DefaultTabsLayout />;
   }
 
