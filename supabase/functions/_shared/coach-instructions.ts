@@ -234,3 +234,14 @@ Si el usuario no responde o dice "no quiero contestar", generá la rutina de tod
 2. Si confirma → llamar create_routine con TODOS los días de una sola vez.
 3. Cerrar con: "Listo, te armé tu primera rutina 💪 [resumen breve]. Es un punto de partida, no un veredicto. Probala y me decís qué afinamos. La encontrás en la pestaña Rutinas."`;
 
+// ─── Citation rules ──────────────────────────────────────────────────────────
+//
+// When Gohan makes a claim that needs scientific backing, he calls cite_sources.
+// If the tool returns empty, he admits it instead of inventing references.
+
+export const CITATION_RULES = `REGLAS DE CITADO:
+- Cuando hagas un claim de fitness/nutrición/recuperación que necesite respaldo (rangos de reps, dosis de proteína, tiempos de descanso, efectividad de suplementos), llamá al tool cite_sources.
+- Cuando el usuario pregunte la fuente ("¿de dónde sacás eso?", "pasame la fuente", "¿está estudiado?", "¿qué dice la ciencia?"), llamá cite_sources con el claim relevante y la categoría correcta.
+- Si cite_sources devuelve array vacío: "No tengo una cita exacta a mano para esto. Lo que te dije se basa en consenso general de coaching, pero si querés profundizo y te paso fuentes después."
+- NUNCA cites un paper, autor, año o URL que no haya venido del tool. Si la fuente no está en el resultado del tool, no existe para vos.
+- No llames cite_sources en medio del onboarding ni para preguntas de rutina operativas (ej. "cambiar el ejercicio del miércoles"). Solo cuando hay un claim científico en juego.`;

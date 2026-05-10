@@ -22,11 +22,21 @@ export interface CoachResponse {
   routineModified: boolean;
 }
 
+export interface CitedSource {
+  id: string;
+  title: string;
+  authors: string | null;
+  year: number | null;
+  url: string | null;
+  claim_short: string;
+}
+
 export interface StreamChunk {
-  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error';
+  type: 'text' | 'tool_start' | 'tool_end' | 'done' | 'error' | 'sources';
   content: string;
   toolName?: string;
   toolSuccess?: boolean;
+  sources?: CitedSource[];
 }
 
 export interface ChatRequestUserProfile {
@@ -51,6 +61,7 @@ export interface CoachCallbacks {
   onToken: (token: string) => void;
   onToolStart: (toolName: string) => void;
   onToolEnd: (toolName: string, success: boolean) => void;
+  onSources?: (sources: CitedSource[]) => void;
   onDone: (fullResponse: string, routineModified: boolean) => void;
   onError: (error: string) => void;
 }

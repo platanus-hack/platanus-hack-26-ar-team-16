@@ -6,6 +6,15 @@ export interface Conversation {
   createdAt: string;
 }
 
+export interface CitedSource {
+  id: string;
+  title: string;
+  authors: string | null;
+  year: number | null;
+  url: string | null;
+  claim_short: string;
+}
+
 export interface ChatMessage {
   id: string;
   conversationId: string;
@@ -13,6 +22,7 @@ export interface ChatMessage {
   content: string;
   audioUrl: string | null;
   createdAt: string;
+  sources?: CitedSource[];
 }
 
 export interface StreamingState {

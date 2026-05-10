@@ -73,6 +73,9 @@ export function streamChat(
               routineModified = true;
               callbacks.onToolEnd(chunk.toolName ?? chunk.content, chunk.toolSuccess ?? true);
               break;
+            case 'sources':
+              if (chunk.sources?.length) callbacks.onSources?.(chunk.sources);
+              break;
             case 'error':
               cleanup();
               callbacks.onError(chunk.content);

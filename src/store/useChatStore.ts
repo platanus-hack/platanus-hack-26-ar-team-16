@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ChatMessage, StreamingState } from '../types';
+import type { ChatMessage, CitedSource, StreamingState } from '../types';
 
 interface ChatState {
   messages: ChatMessage[];
@@ -8,6 +8,7 @@ interface ChatState {
   isLoading: boolean;
   addMessage: (message: ChatMessage) => void;
   updateMessage: (id: string, content: string) => void;
+  updateMessageSources: (id: string, sources: CitedSource[]) => void;
   setMessages: (messages: ChatMessage[]) => void;
   setStreaming: (streaming: Partial<StreamingState>) => void;
   setActiveTool: (toolName: string | null) => void;
@@ -26,6 +27,12 @@ export const useChatStore = create<ChatState>((set) => ({
     set((state) => ({
       messages: state.messages.map((m) =>
         m.id === id ? { ...m, content } : m,
+      ),
+    })),
+  updateMessageSources: (id, sources) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === id ? { ...m, sources } : m,
       ),
     })),
   setMessages: (messages) => set({ messages }),
