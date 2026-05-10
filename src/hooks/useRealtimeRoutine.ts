@@ -1,5 +1,9 @@
 import { useEffect } from 'react';
-import { getActiveRoutine, getRoutineIdsForUser } from '../services/routines';
+import {
+  getActiveRoutine,
+  getRoutineIdsForUser,
+  listUserRoutines,
+} from '../services/routines';
 import { supabase } from '../services/supabase';
 import { useRoutineStore } from '../store';
 import { useCoachContextOrNull } from '../modules/coach/CoachProvider';
@@ -23,6 +27,7 @@ import { useCoachContextOrNull } from '../modules/coach/CoachProvider';
 // payload, but this also stops *event* fan-out across tenants.
 export function useRealtimeRoutine(userId: string | undefined) {
   const setRoutine = useRoutineStore((s) => s.setRoutine);
+  const setRoutines = useRoutineStore((s) => s.setRoutines);
   const setLoading = useRoutineStore((s) => s.setLoading);
   // If a CoachProvider is mounted, its config carries an auth-token getter
   // that needs to be passed to Realtime so the channel is authenticated as
@@ -43,8 +48,14 @@ export function useRealtimeRoutine(userId: string | undefined) {
 
     async function refetch() {
       try {
-        const routine = await getActiveRoutine(userId!);
-        if (!cancelled) setRoutine(routine);
+        const [routine, routines] = await Promise.all([
+          getActiveRoutine(userId!),
+          listUserRoutines(userId!),
+        ]);
+        if (!cancelled) {
+          setRoutine(routine);
+          setRoutines(routines);
+        }
       } catch (err) {
         // eslint-disable-next-line no-console
         console.warn('[useRealtimeRoutine] refetch failed', err);
@@ -148,5 +159,5 @@ export function useRealtimeRoutine(userId: string | undefined) {
       if (refetchTimer) clearTimeout(refetchTimer);
       if (unsubscribe) unsubscribe();
     };
-  }, [userId, setRoutine, setLoading, coachCtx]);
+  }, [userId, setRoutine, setRoutines, setLoading, coachCtx]);
 }

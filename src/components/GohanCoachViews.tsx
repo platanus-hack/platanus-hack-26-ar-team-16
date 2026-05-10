@@ -17,6 +17,7 @@ import {
   ExerciseCard,
   ExerciseDetailScreen,
   RoutineHeader,
+  RoutineSelector,
 } from '@/components/routine';
 import { useTheme } from '@/theme';
 import { useChatStore, useAuthStore, useRoutineStore } from '@/store';
@@ -24,6 +25,8 @@ import { sendUserMessage, seedWelcomeMessage } from '@/modules/chat';
 import { useSpeechRecognition, useRealtimeRoutine } from '@/hooks';
 import { normalizeRoutine, sortExercises } from '@/modules/routine/groupByDay';
 import type { Exercise } from '@/modules/routine/types';
+import { setActiveRoutine } from '@/services/routines';
+import { toast } from '@/store';
 
 interface CommonProps {
   onError?: (e: Error) => void;
@@ -119,7 +122,19 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
   useRealtimeRoutine(userId);
 
   const rawRoutine = useRoutineStore((s) => s.routine);
+  const routines = useRoutineStore((s) => s.routines);
   const isLoading = useRoutineStore((s) => s.isLoading);
+
+  const handleSwitchRoutine = async (routineId: string) => {
+    if (!userId) return;
+    try {
+      await setActiveRoutine(userId, routineId);
+      // Realtime listener picks up the change and refetches.
+    } catch (err) {
+      toast.error('No pudimos cambiar la rutina.');
+      onError?.(err as Error);
+    }
+  };
 
   const routine = useMemo(() => normalizeRoutine(rawRoutine), [rawRoutine]);
 
@@ -207,7 +222,10 @@ export function CoachRoutineView({ onError, onRequestChat }: CoachRoutineViewPro
       <RoutineHeader
         selectedDay={selectedDay}
         onPressCalendar={() => setCalendarVisible(true)}
+        activeRoutineName={routine.name}
       />
+
+      <RoutineSelector routines={routines} onSelect={handleSwitchRoutine} />
 
       <DaySelector
         days={routine.days}

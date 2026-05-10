@@ -35,22 +35,26 @@ export function ExerciseCard({ exercise, highlighted, onPress }: ExerciseCardPro
       ? `${exercise.weight_kg} kg`
       : null;
 
-  const metaParts = [
-    `${setsLabel}${repsLabel}`,
+  const setsRepsTag = `${setsLabel}${repsLabel}`;
+  const subParts = [
     weightLabel,
-    restLabel ? `${restLabel} descanso` : null,
+    restLabel ? `${restLabel} desc` : null,
   ].filter(Boolean) as string[];
 
   const card = (
     <Animated.View style={[styles.card, { borderColor }]}>
-      <View style={styles.leftBar} />
-      <View style={styles.content}>
-        <View style={styles.textWrap}>
-          <Text style={styles.name} numberOfLines={2}>{exercise.name}</Text>
-          <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={18} color="#666" />
+      <View style={styles.textWrap}>
+        <Text style={styles.name} numberOfLines={1}>
+          {exercise.name}
+        </Text>
+        {subParts.length > 0 && (
+          <Text style={styles.sub} numberOfLines={1}>
+            {subParts.join(' · ')}
+          </Text>
+        )}
       </View>
+      <Text style={styles.tag}>{setsRepsTag}</Text>
+      <Ionicons name="chevron-forward" size={14} color="#555" style={{ marginLeft: 4 }} />
     </Animated.View>
   );
 
@@ -65,21 +69,12 @@ export function ExerciseCard({ exercise, highlighted, onPress }: ExerciseCardPro
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#161616',
-    borderRadius: 10,
+    backgroundColor: '#141414',
+    borderRadius: 8,
     borderWidth: 1,
-    marginBottom: 8,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  leftBar: {
-    width: 3,
-    backgroundColor: '#FF6B00',
-  },
-  content: {
-    flex: 1,
+    marginBottom: 4,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -92,12 +87,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#fff',
-    marginBottom: 4,
-    lineHeight: 18,
   },
-  meta: {
-    fontSize: 11,
+  sub: {
+    fontSize: 10,
+    color: '#888',
+    marginTop: 1,
+  },
+  tag: {
+    fontSize: 12,
+    fontWeight: '700',
     color: '#FF6B00',
-    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
 });
