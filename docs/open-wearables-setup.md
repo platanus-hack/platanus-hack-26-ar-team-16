@@ -44,12 +44,14 @@ Editar `backend/config/.env` y cambiar estas lineas:
 # Desactivar Sentry (no lo necesitamos)
 SENTRY_ENABLED=False
 
-# Poner un SECRET_KEY real (copiar este o generar uno)
-SECRET_KEY=welzhKsWgkTjUjTsJFG8O-mKVb47Qh-TULAjXu-wYP5FA-R62E8DQNh98FDtkwmZks1ZqN_5FOFNbWzENyTofw
+# Poner un SECRET_KEY unico. Generar con:
+# python3 -c "import secrets; print(secrets.token_urlsafe(64))"
+SECRET_KEY=<GENERAR-SECRET-KEY>
 
-# Credenciales del admin (se crea automaticamente al iniciar)
-ADMIN_EMAIL=admin@admin.com
-ADMIN_PASSWORD=GohanAdmin2026!
+# Credenciales del admin (se crea automaticamente al iniciar).
+# No usar valores compartidos ni commitear la password real.
+ADMIN_EMAIL=<ADMIN-EMAIL>
+ADMIN_PASSWORD=<GENERAR-PASSWORD-UNICO>
 ```
 
 El resto de variables (providers OAuth, AWS, etc.) se dejan como estan — no las necesitamos para la demo.
@@ -93,7 +95,7 @@ La API Key se genera desde el panel admin de OW.
 ### Opcion A: Via UI (panel admin)
 
 1. Abrir http://localhost:3000
-2. Login con `admin@admin.com` / `GohanAdmin2026!`
+2. Login con el `ADMIN_EMAIL` / `ADMIN_PASSWORD` generados en el paso 3
 3. Ir a Settings > Credentials
 4. Crear una nueva API Key
 5. Copiar la key (empieza con `sk-...`)
@@ -101,10 +103,14 @@ La API Key se genera desde el panel admin de OW.
 ### Opcion B: Via curl
 
 ```bash
+OW_ADMIN_EMAIL="<ADMIN-EMAIL>"
+OW_ADMIN_PASSWORD="<ADMIN-PASSWORD>"
+
 # 1. Obtener token de admin
 TOKEN=$(curl -s -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin@admin.com&password=GohanAdmin2026!" \
+  --data-urlencode "username=$OW_ADMIN_EMAIL" \
+  --data-urlencode "password=$OW_ADMIN_PASSWORD" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 echo "Token: $TOKEN"
@@ -120,11 +126,11 @@ curl -s -X POST "http://localhost:8000/api/v1/api-keys" \
 
 ## 6. Configurar Gohan AI
 
-En el archivo `.env.local` de Gohan AI, agregar:
+La app de Gohan AI no debe recibir credenciales admin de Open Wearables en variables `EXPO_PUBLIC_*`.
+Hasta que exista `ow-bridge`, la sincronizacion debe hacerse solo por scripts locales o por un backend de confianza.
 
 ```env
 EXPO_PUBLIC_OW_HOST=http://localhost:8000
-EXPO_PUBLIC_OW_API_KEY=sk-XXXXXX   # la API key del paso anterior
 ```
 
 > **Android emulator**: la app reemplaza automaticamente `localhost` por `10.0.2.2` para que el emulador pueda alcanzar la maquina host.
@@ -136,13 +142,12 @@ EXPO_PUBLIC_OW_API_KEY=sk-XXXXXX   # la API key del paso anterior
 ### Flujo "Conectar Reloj"
 
 1. El usuario aprieta "Conectar Reloj" en la tab Mas
-2. La app obtiene un token de admin del backend OW
-3. Busca si el usuario ya existe en OW (por email de Supabase)
-4. Si no existe, lo crea
-5. Guarda el `owUserId` en memoria
-6. A partir de ahi puede consultar datos de salud del usuario
+2. La app debe llamar a un backend propio (`ow-bridge`) autenticado con el JWT del usuario
+3. El backend obtiene el token admin de OW desde secrets server-side
+4. El backend crea o busca el usuario OW y persiste el vinculo `profile_id <-> ow_user_id`
+5. A partir de ahi la app consulta datos de salud pasando por ese backend
 
-### Endpoints que usa la app
+### Endpoints que debe usar el backend
 
 | Endpoint | Uso |
 |----------|-----|
@@ -164,9 +169,13 @@ Como no tenemos Apple Watch/Galaxy Watch para la demo, pusheamos datos simulados
 ### Paso 1: Obtener el user ID de OW
 
 ```bash
+OW_ADMIN_EMAIL="<ADMIN-EMAIL>"
+OW_ADMIN_PASSWORD="<ADMIN-PASSWORD>"
+
 TOKEN=$(curl -s -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin@admin.com&password=GohanAdmin2026!" \
+  --data-urlencode "username=$OW_ADMIN_EMAIL" \
+  --data-urlencode "password=$OW_ADMIN_PASSWORD" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 # Listar usuarios — buscar el ID del usuario de Gohan
@@ -307,9 +316,13 @@ Los datos se procesan de forma asincrona via Celery. Tardan 1-2 segundos.
 ### Paso 3: Verificar que los datos se guardaron
 
 ```bash
+OW_ADMIN_EMAIL="<ADMIN-EMAIL>"
+OW_ADMIN_PASSWORD="<ADMIN-PASSWORD>"
+
 TOKEN=$(curl -s -X POST "http://localhost:8000/api/v1/auth/login" \
   -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin@admin.com&password=GohanAdmin2026!" \
+  --data-urlencode "username=$OW_ADMIN_EMAIL" \
+  --data-urlencode "password=$OW_ADMIN_PASSWORD" \
   | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
 
 OW_USER_ID="PONER-UUID-ACA"

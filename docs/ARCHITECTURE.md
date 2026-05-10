@@ -477,15 +477,15 @@ SHA-256 hashed, scoped per tenant, support `kid` for rotation, plaintext shown o
 
 ## 14. Wearables Bridge (Open Wearables) — current state vs. target
 
-The "Conectar Reloj" sheet in the standalone shell's Más tab integrates with a third-party [Open Wearables](https://github.com/your-org/open-wearables) backend for steps / calories / sleep data. This integration was added in commit `82d2750` (pre-auth-refactor) and **does not yet conform to §10's identity model**. It is a tracked debt item — see `docs/tech-debt.md`.
+The "Conectar Reloj" sheet in the standalone shell's Más tab is intended to integrate with a third-party [Open Wearables](https://github.com/your-org/open-wearables) backend for steps / calories / sleep data. The original direct-client integration was added in commit `82d2750` (pre-auth-refactor), **does not conform to §10's identity model**, and is disabled in the client until the server-side bridge exists. It is a tracked debt item — see `docs/tech-debt.md`.
 
-### Current state (DO NOT extend before refactor)
+### Historical direct-client path (DO NOT restore)
 
 ```
 React Native client (mas.tsx)
    └─> src/hooks/useOpenWearables.ts
          └─> src/services/openWearables.ts
-               ├─ POST OW_HOST/auth/login (admin@admin.com + bundled password) ← bundle-leaked
+               ├─ POST OW_HOST/auth/login (bundled admin credential)           ← bundle-leaked
                ├─ GET  OW_HOST/api/v1/users (admin token)                       ← list-all
                ├─ POST OW_HOST/api/v1/users (admin token)                       ← client-driven creation
                └─ stores ow_user_id in module-level `let`                       ← non-persistent
@@ -493,7 +493,7 @@ React Native client (mas.tsx)
 
 Three properties of this path violate the auth refactor invariants:
 
-1. **Admin creds in the JS bundle.** The OW admin email/password are string literals in `openWearables.ts`. They ship in the Hermes bundle and are in git history (rotation pending — see `tech-debt.md`).
+1. **Admin creds in the JS bundle.** The OW admin email/password were string literals in `openWearables.ts`. They shipped in the Hermes bundle and are still in git history (rotation pending — see `tech-debt.md`).
 2. **Client-controlled identity.** `ensureOWUser(email)` lets the client pick which OW user it operates as. There is no Gohan-side `(gohan_user_id ↔ ow_user_id)` mapping; nothing prevents impersonation by passing a different email.
 3. **Per-bundle ephemeral state.** `owUserId` is held in a module-level variable that resets on app restart, requiring a re-auth round-trip every cold start.
 
@@ -525,11 +525,11 @@ create table public.wearables_links (
 );
 ```
 
-Once `ow-bridge` lands, `src/services/openWearables.ts` becomes a thin `apiClient.request('/wearables/...')` wrapper — no admin token, no direct calls to `OW_HOST`, no module-level state — and is then safe to ship in the embeddable `@gohan-ai/react-native` module.
+Once `ow-bridge` lands, `src/services/openWearables.ts` can become a thin `apiClient.request('/wearables/...')` wrapper — no admin token, no direct calls to `OW_HOST`, no module-level state — and is then safe to ship in the embeddable `@gohan-ai/react-native` module.
 
 ### Until then
 
-Do not call `openWearables.ts` from the embeddable module's exports. Keep it confined to the standalone shell's `app/(tabs)/mas.tsx`. Do not add new wearable providers (Whoop, Oura, etc.) on top of the current pattern — that compounds the debt across N services.
+Do not restore direct admin-token calls in `openWearables.ts`. Keep the wearable entrypoint confined to the standalone shell's `app/(tabs)/mas.tsx` until `ow-bridge` exists. Do not add new wearable providers (Whoop, Oura, etc.) on top of the historical direct-client pattern — that compounds the debt across N services.
 
 ---
 
