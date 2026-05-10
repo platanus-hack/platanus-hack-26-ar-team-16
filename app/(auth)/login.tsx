@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,22 @@ import {
   Platform,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { signInWithEmail, signInWithGoogle } from '@/services';
+
+const DEMO_EMAIL = 'demo@gohan.ai';
+const DEMO_PASSWORD = 'GohanDemo2026!';
+
+// Web-only: the landing iframe loads `${APP_URL}?autoLogin=demo` so
+// visitors land on the home tab without ever seeing the login form.
+function shouldAutoLogin() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+  return new URLSearchParams(window.location.search).get('autoLogin') === 'demo';
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -18,7 +29,17 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [autoLoginActive] = useState(shouldAutoLogin);
+  const autoTriggered = useRef(false);
   const theme = useTheme();
+
+  useEffect(() => {
+    if (!autoLoginActive || autoTriggered.current) return;
+    autoTriggered.current = true;
+    void signInWithEmail(DEMO_EMAIL, DEMO_PASSWORD).then(({ error: authError }) => {
+      if (authError) setError(authError.message);
+    });
+  }, [autoLoginActive]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -54,6 +75,16 @@ export default function LoginScreen() {
       setGoogleLoading(false);
     }
   };
+
+  if (autoLoginActive) {
+    return (
+      <View className="flex-1 bg-white items-center justify-center" style={{ gap: 16 }}>
+        <ActivityIndicator size="large" color={theme.primary} />
+        <Text className="text-sm text-slate-500">Cargando demo…</Text>
+        {error && <Text className="text-sm text-red-500 px-6 text-center">{error}</Text>}
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
